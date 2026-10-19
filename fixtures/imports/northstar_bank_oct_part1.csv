@@ -1,0 +1,8 @@
+Date,Description,Reference,Debit,Credit
+02/10/2026,Customer receipt INV-101,BRF-1001,,"65,000.00"
+03/10/2026,Supplier payment BILL-201,BRF-1002,"32,750.25",
+03/10/2026,Supplier payment BILL-201,BRF-1002,"32,750.25",
+06/10/2026,Transfer to wallet,BRF-1003,"10,000.00",
+10/10/2026,Shop rent,BRF-1004,"45,000.00",
+11/10/2026,"=HYPERLINK(""http://example.invalid"")",BRF-1005,100.00,
+31/09/2026,Courier charges,BRF-1006,850.00,

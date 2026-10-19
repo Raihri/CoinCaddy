@@ -1,0 +1,30 @@
+"""Runtime settings loaded from environment variables or the repository-level .env file."""
+
+from functools import lru_cache
+from pathlib import Path
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=REPO_ROOT / ".env", extra="ignore")
+
+    app_env: str = "development"
+    database_url: str = "postgresql+psycopg://smecopilot:change-me-local-only@127.0.0.1:5433/smecopilot"
+    api_cors_origins: str = "http://localhost:5173"
+    mock_services_url: str = "http://127.0.0.1:8100"
+    # Shared password for the synthetic demo users created by the seed script. Local demo only.
+    demo_user_password: str = "change-me-demo"
+    # Private directory for original uploaded files; empty means <repo>/storage/private.
+    storage_dir: str = ""
+
+    @property
+    def cors_origins(self) -> list[str]:
+        return [o.strip() for o in self.api_cors_origins.split(",") if o.strip()]
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()

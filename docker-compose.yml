@@ -1,0 +1,21 @@
+# Local development PostgreSQL only. The API, mock services, and web client run on the host.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: smecopilot-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-smecopilot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-local-only}
+      POSTGRES_DB: ${POSTGRES_DB:-smecopilot}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - smecopilot-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  smecopilot-pgdata:

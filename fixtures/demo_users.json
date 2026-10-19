@@ -1,0 +1,9 @@
+{
+  "notes": "Synthetic demo users. All share DEMO_USER_PASSWORD from .env (local demo only). Re-running the seed restores these roles.",
+  "users": [
+    { "email": "amina@northstar.example", "display_name": "Amina Rahman", "memberships": [{ "business": "northstar-trading", "role": "owner" }] },
+    { "email": "bilal@northstar.example", "display_name": "Bilal Hossain", "memberships": [{ "business": "northstar-trading", "role": "bookkeeper" }] },
+    { "email": "chaya@northstar.example", "display_name": "Chaya Das", "memberships": [{ "business": "northstar-trading", "role": "staff" }] },
+    { "email": "tanvir@riverbend.example", "display_name": "Tanvir Ahmed", "memberships": [{ "business": "riverbend-crafts", "role": "owner" }] }
+  ]
+}

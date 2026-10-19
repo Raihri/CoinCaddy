@@ -1,0 +1,16 @@
+{
+  "fixture_id": "riverbend_crafts_v1",
+  "synthetic": true,
+  "notes": "Second synthetic business used to prove cross-business isolation. No transactions; profile and accounts only.",
+  "business": {
+    "slug": "riverbend-crafts",
+    "name": "Riverbend Crafts (synthetic)",
+    "jurisdiction": "BD",
+    "base_currency": "BDT",
+    "timezone": "Asia/Dhaka",
+    "reserve": { "amount_minor": 2500000, "currency": "BDT" }
+  },
+  "accounts": [
+    { "ref": "RB-BANK", "label": "Riverbend bank account", "kind": "bank", "currency": "BDT" }
+  ]
+}

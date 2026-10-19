@@ -1,0 +1,49 @@
+{
+  "fixture_id": "northstar_trading_v1",
+  "synthetic": true,
+  "notes": "Synthetic demo business. All amounts are signed integer minor units (BDT: 1 taka = 100 poisha). Hand-checked arithmetic is in fixtures/northstar_trading_expected.md.",
+  "business": {
+    "slug": "northstar-trading",
+    "name": "Northstar Trading (synthetic)",
+    "jurisdiction": "BD",
+    "base_currency": "BDT",
+    "timezone": "Asia/Dhaka",
+    "reserve": { "amount_minor": 8000000, "currency": "BDT" }
+  },
+  "period": { "start_business_date": "2026-10-01", "end_business_date": "2026-10-15" },
+  "accounts": [
+    { "ref": "ACC-BANK", "label": "Operating bank account", "kind": "bank", "currency": "BDT",
+      "opening": { "business_date": "2026-10-01", "amount_minor": 18500000, "currency": "BDT" } },
+    { "ref": "ACC-WALLET", "label": "Merchant mobile wallet", "kind": "mobile_wallet", "currency": "BDT",
+      "opening": { "business_date": "2026-10-01", "amount_minor": 4250050, "currency": "BDT" } },
+    { "ref": "ACC-CASH", "label": "Cash box", "kind": "cash", "currency": "BDT",
+      "opening": { "business_date": "2026-10-01", "amount_minor": 1200000, "currency": "BDT" } }
+  ],
+  "transactions": [
+    { "ref": "T001", "account": "ACC-BANK",   "business_date": "2026-10-02", "event_utc": "2026-10-02T04:15:00Z", "amount_minor": 6500000,  "currency": "BDT", "kind": "operating_receipt", "memo": "Customer receipt INV-101" },
+    { "ref": "T002", "account": "ACC-BANK",   "business_date": "2026-10-03", "event_utc": "2026-10-03T06:40:00Z", "amount_minor": -3275025, "currency": "BDT", "kind": "operating_payment", "memo": "Supplier payment BILL-201" },
+    { "ref": "T003", "account": "ACC-WALLET", "business_date": "2026-10-05", "event_utc": "2026-10-05T09:05:00Z", "amount_minor": 1849975,  "currency": "BDT", "kind": "operating_receipt", "memo": "Customer receipt INV-102" },
+    { "ref": "T004", "account": "ACC-BANK",   "business_date": "2026-10-06", "event_utc": "2026-10-06T03:00:00Z", "amount_minor": -1000000, "currency": "BDT", "kind": "own_transfer", "transfer_group": "TG-1", "memo": "Transfer to wallet" },
+    { "ref": "T005", "account": "ACC-WALLET", "business_date": "2026-10-06", "event_utc": "2026-10-06T03:02:00Z", "amount_minor": 1000000,  "currency": "BDT", "kind": "own_transfer", "transfer_group": "TG-1", "memo": "Transfer from bank" },
+    { "ref": "T006", "account": "ACC-CASH",   "business_date": "2026-10-08", "event_utc": "2026-10-08T08:30:00Z", "amount_minor": -350000,  "currency": "BDT", "kind": "operating_payment", "memo": "Petty expenses" },
+    { "ref": "T007", "account": "ACC-BANK",   "business_date": "2026-10-10", "event_utc": "2026-10-09T18:30:00Z", "amount_minor": -4500000, "currency": "BDT", "kind": "operating_payment", "memo": "Shop rent (00:30 Dhaka on 10 Oct = 18:30 UTC on 9 Oct)" },
+    { "ref": "T008", "account": "ACC-WALLET", "business_date": "2026-10-12", "event_utc": "2026-10-12T10:10:00Z", "amount_minor": -799990,  "currency": "BDT", "kind": "operating_payment", "memo": "Supplier payment BILL-202" }
+  ],
+  "expected": {
+    "closing_by_account": {
+      "ACC-BANK":   { "amount_minor": 16224975, "currency": "BDT" },
+      "ACC-WALLET": { "amount_minor": 6300035,  "currency": "BDT" },
+      "ACC-CASH":   { "amount_minor": 850000,   "currency": "BDT" }
+    },
+    "opening_total_same_currency": { "amount_minor": 23950050, "currency": "BDT" },
+    "closing_total_same_currency": { "amount_minor": 23375010, "currency": "BDT" },
+    "operating_receipts":          { "amount_minor": 8349975,  "currency": "BDT" },
+    "operating_payments":          { "amount_minor": 8925015,  "currency": "BDT" },
+    "net_operating_cash":          { "amount_minor": -575040,  "currency": "BDT" },
+    "own_transfer_net":            { "amount_minor": 0,        "currency": "BDT" },
+    "lowest_end_of_day_total": {
+      "business_date": "2026-10-12",
+      "total": { "amount_minor": 23375010, "currency": "BDT" }
+    }
+  }
+}

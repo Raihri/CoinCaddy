@@ -12,7 +12,10 @@
 | 02 | Audit Trail | **Done — verified locally** |
 | 03 | Business Setup | **Done — verified locally** |
 | 04 | Safe Records Import | **Done — verified locally** |
-| 05–22 | Trusted Cash Reconstruction through Region Pack | Not started |
+| 05 | Trusted Cash Reconstruction | **Done — verified locally** |
+| 06 | Receivables and Payables Ledger | **Done — verified locally** |
+| 07 | Financial Health | **Done — verified locally** |
+| 08–22 | Cash Outlook through Region Pack | Not started |
 
 ## Prompt 00 — runnable foundation
 
@@ -256,12 +259,139 @@
 - Only the first 500 preview rows are shown in the UI (the API pages up to 5,000). Very large files are slower to map (one UPDATE per row, batched).
 - The posted batch's original file stays on disk. Discarded batches keep their file and staged rows for traceability.
 
+## Prompt 05 — Trusted Cash Reconstruction
+
+### What was built
+
+| Area | What exists | Files |
+| --- | --- | --- |
+| Schema | Alembic revision `0006_cash_reconstruction` adds four insert-only tables, each tied by composite foreign keys to an account (or ledger transactions) of the **same** business:<br>• `balance_anchor`: a statement/count balance at the **end** of a business date, in signed minor units with currency, source kind, and reference. At most one active anchor per account per day.<br>• `coverage_period`: dates whose movements are declared complete, optionally backed by a posted import.<br>• `restricted_fund`: unspendable money with an effective date range.<br>• `own_transfer`: both sides of a transfer between own accounts, or one side when the other is missing.<br>A shared trigger rejects DELETE and any UPDATE except setting the void fields **once** (time, user, reason), so corrections are visible history, never silent edits. Partial unique indexes stop a ledger transaction from being in two active transfers | [backend/migrations/versions/0006_cash_reconstruction.py](backend/migrations/versions/0006_cash_reconstruction.py) |
+| Reconstruction (calculation `cash-recon-v1`, pure function) | **Reconciliation:** for each pair of consecutive anchors, residual = opening + posted movements in (d0, d1] − closing. The tolerance is exactly zero. Status is **balanced** only when the residual is 0 **and** coverage spans every date. A zero residual with gaps is **"balanced_incomplete"**, with the gap dates listed: a zero residual never implies complete coverage. A non-zero residual is **"residual"**, with the exact amount.<br>**Verified balance:** the latest anchor plus posted movements through the end of the contiguous coverage after it (`evidence_through`). Posted movements after that date are shown as **uncovered** and are not added.<br>**Freshness:** fresh if verified within **2 days** of the as-of date; otherwise stale. No anchor → the balance is **unknown**.<br>**Usable** = verified balance − active restricted funds.<br>**Totals:** per currency, and they add up **only fresh accounts with a known balance**. Stale and missing accounts are listed by name and never summed. Currencies are never combined.<br>**Transfers:** suggested pairs (same amount and currency, different accounts, ≤ 3 days apart, one-to-one) are only suggestions until confirmed. One-sided declarations show as **unmatched** with the missing side named.<br>**Account status:** Verified / Stale / Missing balance / Needs review (residual, coverage gap, unmatched transfer, or restriction above balance). Positions can be computed **as of** any past date | [backend/app/modules/cash/service.py](backend/app/modules/cash/service.py) |
+| API and validation | `GET …/cash/position?as_of=` (as_of between 2000-01-01 and business today).<br>`POST …/cash/anchors`, `…/coverage`, `…/restrictions`, `…/transfers`, and `POST …/cash/{kind}/{id}/void` with a required reason.<br>**Anchors:** date not in the future (business timezone) and not before 2000; integer minor units (floats, strings, out-of-range refused); currency must equal the account's (no conversion); a known source kind; a reference is required; a second anchor on the same day → 409 (void first).<br>**Coverage:** start ≤ end ≤ today; at most about a year; an import-backed period must use a **posted** import of the **same account** and include all of its rows' dates.<br>**Restrictions:** amount > 0, account currency, reason required, end ≥ start.<br>**Transfers:** out side negative, in side positive, different accounts, same currency, equal amounts, ≤ 5 days apart; a transaction already in a transfer → 409. Foreign accounts, anchors, and transactions → 404 | [backend/app/modules/cash/router.py](backend/app/modules/cash/router.py) |
+| Permissions and audit | New role action `cash.manage` (owner, bookkeeper). Staff can read positions but not change them. Audited: anchor add, coverage add, restriction add, transfer add, every void (with its reason), and denials | [policy.py](backend/app/modules/identity/policy.py) |
+| UI (Records mockup) | The **Records & reconciliation** page now has:<br>• **Usable cash by currency**: spendable total, restricted amount, and "Not included: … (stale) / (no balance)".<br>• **Connected records** with *Last verified*, *Usable*, and status badges (Verified / Stale / Missing balance / Needs review), as in the mockup.<br>• **Items to review**, combining staged imports, account issues, and transfer suggestions.<br>**Account page:** KPI cards (verified balance with date, restricted, usable, uncovered movements), "What needs attention", a reconciliation-periods table (opening, movements, closing, residual, gaps, status), and anchors, coverage, and restrictions, each with add forms and void/release with a reason (owner/bookkeeper only).<br>**Transfers page:** suggested pairs with "Link as transfer", declared transfers (matched/unmatched) with void, and a one-sided declaration | [frontend/src/cash/](frontend/src/cash/), [frontend/src/records/RecordsPage.tsx](frontend/src/records/RecordsPage.tsx) |
+| Expected values | Hand-checked worked examples for all four cases | [fixtures/cash_reconstruction_expected.md](fixtures/cash_reconstruction_expected.md) |
+| Test helper | `tests/helpers.py` creates a fresh business with the three fixture accounts and posts all eight Northstar fixture transactions **through the real import API**. Later prompts reuse it | [backend/tests/helpers.py](backend/tests/helpers.py) |
+
+### Evidence (run on 20 Oct 2026)
+
+- `alembic upgrade head` → `0005_records_import -> 0006_cash_reconstruction`. `/api/health/ready` → 200 at `0006_cash_reconstruction`.
+- `pytest -q` → **209 passed**: 181 earlier plus 28 new in [backend/tests/test_cash_reconstruction.py](backend/tests/test_cash_reconstruction.py), with exact values from the expected-values file. (One older test, ledger TRUNCATE, was updated because the new foreign keys now refuse TRUNCATE before the trigger does. The ledger is still unchanged afterwards.)
+  - **Balanced period:** bank 18,500,000 + (−2,275,025 over 4 transactions) = 16,224,975. Residual **0**, no gaps → **balanced**. Fresh (age 1). Usable **14,224,975** after the 2,000,000 restriction.
+  - **Missing period:** wallet residual **0**, but coverage stops on 9 Oct → **balanced_incomplete** with gap **10–15 Oct**, status *Needs review*, message "…completeness is not proven".
+  - **Stale anchor:** cash box verified only through **20 Sep**, age **26** → **stale**. T006 (−350,000) is reported as **1 uncovered movement**, and the cash box is **not** in the spendable total.
+  - **Unmatched transfer:** the system suggests exactly **T004 → T005 (1,000,000)**. Declaring T004 alone → **unmatched, incoming side missing, 1,000,000**, and the bank is flagged. Linking both sides while T004 is still declared → 409. After voiding and linking: **matched**, no suggestion, bank *Verified*.
+  - **Spendable BDT** = **20,525,010** (bank 14,224,975 + wallet 6,300,035), restricted 2,000,000. Also: a wrong closing gives residual **24,975**; accounts with no anchor are listed as missing with an unknown balance; four movements after a lone anchor are uncovered and not verified; an as-of date limits what counts.
+  - **Validation (≈30 cases):** future, pre-2000, foreign-currency, float, and string anchors; same-day duplicate → 409; void requires a reason and works only once; bad and over-long coverage periods; an import from another account or not including its rows; zero or negative restrictions and bad dates; every transfer rule.
+  - **Permissions and data integrity:** staff → 403 on all changes but can read; a bookkeeper can add. Another business → 404 on the position, foreign accounts, anchors, and transactions. Direct SQL UPDATE/DELETE on anchors, coverage, and transfers is rejected by the trigger. Interval merge/gap unit tests.
+- **Browser run (real UI, demo business; today is 20 Oct 2026):**
+  - Amina entered a balance dated 2999-01-01 and got the server error "must be between 2000-01-01 and today…". She then entered 01 Oct ৳ 1,85,000.00 and 15 Oct ৳ 1,79,549.75.
+  - The period showed **"Zero residual, coverage incomplete"** with gap 02–15 Oct. After declaring coverage 02–15 Oct it became **Balanced** (movements −5,450.25 over 6 rows, residual 0.00).
+  - A ৳ 20,000 security deposit gave usable **৳ 1,59,549.75**.
+  - The wallet got a 30 Sep balance (→ **Stale**). The bank's "Transfer to wallet" was declared one-sided → **Unmatched · incoming side missing**.
+  - The Records page then showed bank *Needs review*, wallet *Stale*, cash box *Missing balance*. **Spendable now ৳ 0.00**, because no account is verified within 2 days, and all three are listed as not included. Items to review listed all three.
+  - Chaya (staff) saw the account page without any entry forms.
+  - Screenshots checked on desktop and at 390×844. A small fix was made after review: links styled as buttons are no longer underlined.
+
+### Known gaps and risks
+
+- The freshness threshold (2 days) and the exact-zero tolerance are fixed constants, not per-business settings.
+- Verified balances rely on people declaring coverage honestly. The system cannot prove a statement is complete; it only refuses to assume completeness.
+- Transfer suggestions need exact amounts and ≤ 3 days. Transfers with fees (different amounts) must be linked manually; that is allowed only when amounts are equal, so fee-bearing transfers cannot be linked yet.
+- Restricted funds are not checked against overlapping restrictions. Voided entries remain visible only in the audit trail, not on the account page.
+- Demo database state after the browser run: Northstar bank anchors 01/15 Oct, coverage 02–15 Oct, a ৳ 20,000 restriction, a wallet anchor of 30 Sep, and one unmatched "Transfer to wallet" (the wallet side was never imported).
+
+## Prompt 06 — Receivables and Payables Ledger
+
+### What was built
+
+| Area | What exists | Files |
+| --- | --- | --- |
+| Schema | Alembic revision `0007_obligations` adds three tables:<br>• `party`: customer or supplier, unique name per business ignoring case.<br>• `obligation`: a customer invoice or supplier bill, holding direction, party, document number, issue and due dates, amount in minor units, currency, category, description, **source reference**, optional expected settlement account, **dispute flag + reason**, and cancellation.<br>• `allocation`: append-only. A payment is positive and may link to a posted bank transaction; a **reversal** is the exact negative of one earlier payment, linked to it, at most once.<br>A trigger makes an obligation's **original terms immutable**: only the dispute fields, cancellation (once), and settlement account can change, and DELETE is refused. Allocations reject UPDATE/DELETE/TRUNCATE. Database checks: amounts > 0 and ≤ 10^15; due ≥ issue and within 5 years; category valid for the direction; reversal shape; consistent dispute and cancel fields. Composite foreign keys keep parties, obligations, accounts, and bank transactions inside one business. Document numbers are unique per business + direction + party, ignoring case | [backend/migrations/versions/0007_obligations.py](backend/migrations/versions/0007_obligations.py) |
+| Exact outstanding amounts | Outstanding = original amount − sum(allocations), with reversals negative. Status: open / partly paid / paid / cancelled. Overdue and days overdue are computed against the business date. **Customer dues**: due this week / overdue 1–30 / overdue 30+ / due later, with **disputed amounts on their own line and never inside the buckets**, plus overdue count and customers. **Upcoming supplier payments**: outstanding bills due within 30 days, overdue first. All per currency; currencies are never mixed | [backend/app/modules/obligations/service.py](backend/app/modules/obligations/service.py) |
+| Over-allocation protection | The obligation row is locked (`FOR UPDATE`) before outstanding is computed, so concurrent payments cannot together exceed it. A payment linked to a bank transaction must have the right sign (receivable = money in, payable = money out), the same currency, and the transaction's own date. The transaction row is also locked, and the total allocated against it (net of reversals) cannot exceed its amount. Over-allocation attempts → 409 with the amount still available, and are audited as conflicts | [backend/app/modules/obligations/router.py](backend/app/modules/obligations/router.py) |
+| API and validation | `GET …/obligations` (optional direction, as_of), `GET …/summary`, `GET …/{id}` (with allocations), `POST …/obligations`, `POST …/{id}/allocations`, `POST …/{id}/allocations/{aid}/reverse`, `POST …/{id}/dispute`, `POST …/{id}/cancel`.<br>**Obligations:** strict models (unknown fields refused); integer minor units only; supported currency; category must match the direction; issue date not in the future and not before 2000; due ≥ issue; text is NFC-cleaned, length-limited, and **formula-looking text is refused**; the settlement account must belong to the business and match the currency. Duplicate number for the same party → 409.<br>**Disputes:** need a reason; clearing must not have one; a repeat → 409.<br>**Reversals:** dated between the payment date and today; a second reversal → 409; a reversal of a reversal → 409.<br>**Cancel:** only with nothing net paid; once only; no payments afterwards | same |
+| Permissions and audit | New role actions `obligations.read` (all roles) and `obligations.write` (owner, bookkeeper). Audited: create, allocate (success / over-allocation conflict), reverse (with reason), dispute set/clear, cancel, and denials | [policy.py](backend/app/modules/identity/policy.py) |
+| UI | **Invoices & bills** page (from Records):<br>• **Customer dues** card styled after the Financial Health mockup (due this week, overdue 1–30, overdue 30+, due later, disputed shown separately, total).<br>• **Upcoming supplier payments** list styled after the Cash Outlook "Upcoming movements".<br>• Customer invoices / supplier bills tabs with status, "Nd overdue", and "Disputed" badges.<br>• A **New invoice or bill** form with field-level server errors.<br>**Detail page:** KPI cards (original amount "never changed", paid net of reversals, outstanding, details), a payments-and-reversals table, a **Record payment** form (optional link to an eligible posted bank transaction, which sets the date automatically), **Reverse** with a reason, **Mark as disputed / Clear dispute**, and **Cancel** (only when nothing is paid). Staff see everything read-only | [frontend/src/obligations/](frontend/src/obligations/) |
+
+### Evidence (run on 20 Oct 2026)
+
+- `alembic upgrade head` → `0006_cash_reconstruction -> 0007_obligations`.
+- `pytest` → **42 new tests passed** in [backend/tests/test_obligations.py](backend/tests/test_obligations.py). The full suite was re-run after Prompt 07 (see there).
+  - **Partial payment:** a 5,000,000 invoice paid 2,000,000 → partly paid, 3,000,000 outstanding. A 3,000,001 payment → 409 with `outstanding_minor 3,000,000` and an audited conflict. Paying 3,000,000 → paid, 0 outstanding. Paying 1 more → 409. The original amount stays 5,000,000.
+  - **Disputed invoice:** marking without a reason → 422; marking twice → 409. The summary shows **disputed 5,000,000 and overdue 1–30 = 0**. A partial payment is still allowed. After clearing: disputed 0, overdue 1–30 = 4,000,000.
+  - **Reversal:** a reversal dated before the payment → 422. Reversing 2,000,000 → outstanding back to 5,000,000 with the amount unchanged. Entries: `payment 2,000,000 (reversed)` + `reversal −2,000,000`. Reversing twice → 409; reversing a reversal → 409.
+  - **Concurrent over-allocation:** 8 parallel payments of 300,000 on a 1,000,000 invoice → **exactly 3 × 201 and 5 × 409**, final paid 900,000 and outstanding 100,000.
+  - **Bank links:** linking to fixture T001 (+6,500,000) requires its date. A payable cannot use money in. Two invoices of 4,000,000 against T001 → the second → 409 with `available 2,500,000`, then 2,500,000 succeeds. A supplier bill settled by T002. A foreign transaction → 404.
+  - **Buckets** (as of 16 Oct): due this week 100, overdue 1–30 = 200, 30+ = 400, later 800, disputed 1,600, total 3,100; 3 overdue items from 1 customer. Upcoming payables 120, of which 70 overdue, with the item outside 30 days excluded.
+  - **Validation and permissions:** 19 invalid obligation inputs and 7 invalid payment inputs → 422 with nothing stored; cancel rules. Staff → 403 on writes but can read; a bookkeeper can pay. Another business → 404 everywhere. Direct SQL changes to amount or due date, deleting an obligation, and changing or deleting an allocation are all rejected by triggers.
+- **Real bug found by the tests and fixed:** PostgreSQL `sum()` over bigint returns `numeric`, so the "transaction has only N left" 409 failed to serialize (500). It is now converted to an integer.
+- **Browser run (real UI, demo business):**
+  - **Invoice entry:** Amina entered INV-104 with a due date before the issue date → the server error "due_date must not be before issue_date" appeared under the field. The corrected invoice opened its detail page.
+  - **Payment and reversal:** a ৳ 20,000 part payment → outstanding ৳ 30,000. A ৳ 40,000 payment was blocked ("More than the outstanding amount"). **Reverse** with the reason "Payment sent to wrong invoice" → outstanding back to ৳ 50,000, and the original payment row is shown as "Payment (reversed)".
+  - **Demo data:** further invoices and bills were entered through the API as Amina (audited). INV-101 and BILL-201 were settled by linking the posted bank transactions, and INV-099 was disputed.
+  - **Records page:** Customer dues = this week ৳ 50,000, overdue 1–30 ৳ 56,000, 30+ ৳ 0, later ৳ 47,000, **disputed ৳ 26,000 separately**, total ৳ 1,79,000. Upcoming supplier payments listed BILL-210, PAY-OCT, RENT-NOV, LOAN-0507 (৳ 1,96,000).
+  - **Staff:** Chaya had no "New" button, and an API create → 403.
+  - **UI fix after review:** a stale payment-form error now clears when the balance changes.
+- **Housekeeping (honest note):** my Prompt 06 browser script accidentally re-ran the Prompt 05 script, adding a second ৳ 20,000 restriction and a duplicate coverage period to the demo bank (duplicate balances were refused with 409). Both duplicates were **voided through the API as Amina** with the reason "Duplicate entry created by a test script re-run", which is visible in the audit trail. The demo again has one restriction and one coverage period.
+
+### Known gaps and risks
+
+- No credit notes or partial write-offs: an obligation can only be paid, reversed, disputed, or cancelled (when nothing is paid).
+- Payment-to-transaction matching is manual. There are no automatic suggestions, and a payment cannot be split across multiple bank transactions in one step (add two payments).
+- Party records hold only a name. There are no contacts yet (Prompt 18 needs verified contacts).
+- No reminders are drafted and no forecast is produced from these obligations (out of scope: Prompts 08 and 18).
+
+## Prompt 07 — Financial Health
+
+### What was built
+
+| Area | What exists | Files |
+| --- | --- | --- |
+| Schema | Alembic revision `0008_classification` adds `txn_classification`, how a **posted** transaction is interpreted. The kind is one of operating receipt, operating payment, financing received/repaid, owner contribution/drawing, or other non-operating; operating kinds also have a category. The ledger itself stays append-only. A database check ties categories to kinds, and a composite foreign key keeps each classification inside the transaction's business | [backend/migrations/versions/0008_classification.py](backend/migrations/versions/0008_classification.py) |
+| Cash-basis summary (calculation `fh-v1`) | For a month and currency, from posted records only:<br>• **operating receipts**, **operating payments**, and **net operating cash**, each by category;<br>• **operating cash margin** in basis points, with exact integer rounding half away from zero. It is shown only when there are operating receipts; otherwise it is "not available" with the reason;<br>• a **6-month trend**;<br>• customer dues and upcoming bills from Prompt 06.<br>**Own-account transfers** (Prompt 05) are excluded from every operating figure automatically and cannot be classified. **Financing and owner money** are reported under "not counted as revenue or expense". **Unclassified** records are counted and marked as incomplete. Source-coverage gaps (Prompt 05) are listed per account. A deterministic **"What changed"** sentence is built from the numbers; no AI computes or writes any figure | [backend/app/modules/health_summary/service.py](backend/app/modules/health_summary/service.py) |
+| Links to source records | Every category, total, and excluded line carries its transaction IDs. `GET …/financial-health/transactions?month&kind&category` returns the exact posted rows with account, reference, source import, and row number | [backend/app/modules/health_summary/router.py](backend/app/modules/health_summary/router.py) |
+| Classification API | `GET …/classifications` (optional month and unclassified filter), with **deterministic suggestions** from Prompt 06 payment links: a bank receipt that paid a sales invoice → operating receipt · sales; a loan-repayment bill → financing repaid. `POST …/classifications` is an all-or-nothing batch of 1–200 items with checks:<br>• the sign must match the kind (a receipt needs money in, a payment money out);<br>• the category must be valid for the kind; financing and owner kinds take no category;<br>• no duplicate IDs;<br>• an own-account transfer → 409;<br>• another business's transaction → 404.<br>New role action `ledger.classify` (owner, bookkeeper). Every batch is audited with from→to kinds | same |
+| Validation | `month` must be `YYYY-MM` between 2000-01 and the current business month; currency must be supported; unknown drill-down kinds → 422 | same |
+| UI (from `images/03-financial-health.png`) | **Financial health** page:<br>• month picker and the "cash-basis, not an audited P&L" notice;<br>• an **incomplete** banner when records are unclassified;<br>• KPI cards: operating receipts, payments (with change vs last month), operating cash margin, overdue invoices with disputed shown separately. Clicking a card opens its source records;<br>• a **receipts vs payments** grouped bar chart with hover tooltip, legend, and "Show table";<br>• **What changed**, customer dues, a by-category table (each row opens its records), and "Not counted as revenue or expense";<br>• a coverage warning, a **source-records drill-down**, and a **Classify posted records** table with suggestions (owner/bookkeeper only).<br>Chart colours: the validated categorical pair blue `#2347A5` / orange `#eb6834` (dataviz validator: all checks pass on the white surface, CVD ΔE 28.3) | [frontend/src/health/FinancialHealthPage.tsx](frontend/src/health/FinancialHealthPage.tsx), [frontend/src/charts/Charts.tsx](frontend/src/charts/Charts.tsx) |
+| Expected values | Hand-checked worked example of the fixture's October summary | [fixtures/financial_health_expected.md](fixtures/financial_health_expected.md) |
+
+### Evidence (run on 20 Oct 2026)
+
+- `alembic upgrade head` → `0007_obligations -> 0008_classification`.
+- Full suite after Prompts 05–07: **272 passed** (`pytest -q`). `/api/health/ready` → 200 at `0008_classification`; `npm run build` passes.
+- **21 new tests passed** in [backend/tests/test_financial_health.py](backend/tests/test_financial_health.py):
+  - **Totals against the independent fixture:** the test reads the fixture JSON's own expected values. Operating receipts **8,349,975**, payments **8,925,015**, net **−575,040**, margin **−689 bp**. Categories: rent 4,500,000 / inventory 4,075,015 / other 350,000 and sales 8,349,975. Own transfers in 1,000,000 / out 1,000,000 excluded. Complete with 8 records.
+  - **Source links:** sales drill-down = exactly T001 + T003 (8,349,975, each with its import batch and row); rent = T007; all payments = 8,925,015; own transfers = T004 + T005.
+  - **Financing proceeds are not revenue:** a +10,000,000 loan wrongly classified as sales raised receipts to 18,349,975. Reclassified as financing received, receipts went back to **8,349,975**, with financing in 10,000,000 reported separately.
+  - **Incomplete and suggestions:** with nothing classified, 8 unclassified (in 9,349,975 / out 9,925,015) → complete = false, the margin is unavailable with its reason, the "What changed" text says the figures are incomplete, and coverage gaps are listed. The 6-month trend runs May–Oct, and "What changed" reads "rose by BDT 83,499.75 compared with 2026-09…". A suggestion comes from an invoice payment ("Paid INV-101").
+  - **Classification rules and access:** 8 classification cases (sign, category, and kind rules); an all-or-nothing batch (one bad item → nothing saved); duplicate IDs, empty batch, own transfer → 409, a foreign transaction → 404, staff → 403, a bookkeeper allowed.
+  - **Cross-business isolation:** another business gets 404 on the summary and drill-down, its own summary has 0 records (nothing leaks), and staff can read.
+  - **Month validation:** 5 invalid months → 422.
+- **Browser run (real UI, demo business):**
+  - **Before classifying:** Financial health for Oct 2026 showed the **Incomplete** banner: "5 posted transaction(s) … not classified (৳ 86,500.00 in, ৳ 81,950.25 out)". The margin was "Not available". Two suggestions were pre-filled ("Paid INV-101", "Paid BILL-201"). The transfer to the wallet showed as an own-account transfer.
+  - **After choosing rent, utilities, and sales and saving:** receipts **৳ 86,500.00**, payments **৳ 81,950.25**, margin **5.26%** (net ৳ 4,549.75), exactly as hand-computed.
+  - Categories: sales 86,500 / rent 45,000 / inventory 32,750.25 / utilities 4,200. "Own-account transfers: out ৳ 10,000.00" is listed as not counted. "View source transactions" listed INV-101 (row 2) and INV-103 (row 4).
+  - Staff saw the same figures with no Save button.
+- **Fixes made after reviewing the screenshots:**
+  - The overdue-invoices card counted a disputed customer, while its amount excluded disputes. The counts now exclude disputed items, matching the buckets; the test was updated.
+  - The chart now has the wide column.
+  - A table total row inherited a flex layout and broke on mobile.
+  - Axis labels are now readable on phones.
+
+### Known gaps and risks
+
+- Classification is manual apart from invoice-link suggestions. There are no rules engine and no learned categorisation (by design: no AI arithmetic or guessing).
+- Monthly figures use business dates. There are no custom date ranges or quarter/year views yet.
+- Trends compare calendar months only. The "change vs last month" percentage is a display calculation in the browser; the server figures are exact.
+- Months with posted movements but incomplete coverage are flagged, not blocked.
+
 ## Not built or verified yet
 
 | Area | Current status |
 | --- | --- |
 | Owner approval, action tiers T1–T3 | Not implemented (Prompt 15). Login, roles, and API business isolation (Prompt 01) and the audit trail (Prompt 02) are built |
-| Reconciliation, balances, transfers, receivables/payables | Not implemented (Prompts 05–06). CSV/XLSX import into an append-only ledger is built (Prompt 04) |
+| Records foundation | Built: CSV/XLSX import (Prompt 04); balance reconstruction, reconciliation, restricted funds, and transfers (Prompt 05); receivables and payables with payments, reversals, and disputes (Prompt 06) |
 | Financial analysis, cash forecast, alerts, Payment Review, and Rescue Plan | Not implemented (Prompts 07–11, 13) |
 | Financing catalogue, matching, readiness, conditional plan, and Funding Passport | Not implemented (Prompts 12, 14, 19, 20) |
 | Fraud rules and payment hold | Not implemented (Prompt 16) |

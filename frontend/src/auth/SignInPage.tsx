@@ -45,9 +45,6 @@ export function SignInPage() {
         <button type="submit" className="btn btn-primary" disabled={busy}>
           {busy ? "Signing in…" : "Sign in"}
         </button>
-        <p className="muted small">
-          Demo users are listed in fixtures/demo_users.json; the password is DEMO_USER_PASSWORD in .env.
-        </p>
       </form>
     </div>
   );

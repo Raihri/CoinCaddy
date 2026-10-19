@@ -28,6 +28,14 @@ ROLE_MATRIX: dict[str, frozenset[str]] = {
     "import.review": frozenset({"owner", "bookkeeper"}),
     # Post selected staged rows to the canonical ledger.
     "import.commit": frozenset({"owner", "bookkeeper"}),
+    # Enter balance anchors, coverage periods, restricted funds, and own-account transfer links.
+    "cash.manage": frozenset({"owner", "bookkeeper"}),
+    # See invoices, bills, payments, customer dues, and upcoming supplier payments.
+    "obligations.read": frozenset({"owner", "bookkeeper", "staff"}),
+    # Enter invoices and bills, allocate and reverse payments, mark disputes, cancel.
+    "obligations.write": frozenset({"owner", "bookkeeper"}),
+    # Classify posted transactions (operating receipt/payment category, financing, owner money).
+    "ledger.classify": frozenset({"owner", "bookkeeper"}),
     # Read the business's audit history.
     "audit.read": frozenset({"owner", "bookkeeper"}),
 }

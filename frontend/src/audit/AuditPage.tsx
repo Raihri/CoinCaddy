@@ -93,6 +93,39 @@ function describe(e: AuditEvent): string {
     case "import.review:denied":
     case "import.commit:denied":
       return `Tried to ${e.action.split(".")[1]} imported records without permission`;
+    case "cash.anchor_add:success":
+      return `Entered a balance for ${d.account} at the end of ${d.anchor_date}`;
+    case "cash.coverage_add:success":
+      return `Declared ${d.account} complete from ${d.period_start} to ${d.period_end}`;
+    case "cash.restriction_add:success":
+      return `Restricted funds in ${d.account} from ${d.effective_from}`;
+    case "cash.transfer_add:success":
+      return d.matched ? "Linked both sides of an own-account transfer" : "Declared a one-sided own-account transfer";
+    case "cash.balance_anchor_void:success":
+    case "cash.coverage_period_void:success":
+    case "cash.restricted_fund_void:success":
+    case "cash.own_transfer_void:success":
+      return `Voided a ${e.action.split(".")[1].replace("_void", "").replace(/_/g, " ")}: ${d.reason}`;
+    case "obligation.create:success":
+      return `Entered ${d.direction === "receivable" ? "invoice" : "bill"} ${d.document_number} for ${d.party}`;
+    case "obligation.allocate:success":
+      return `Recorded a payment; ${d.outstanding_after_minor} minor units still outstanding`;
+    case "obligation.allocate:conflict":
+      return `Refused a payment that would over-allocate (outstanding ${d.outstanding_minor})`;
+    case "obligation.reverse:success":
+      return `Reversed a payment: ${d.reason}`;
+    case "obligation.dispute:success":
+      return d.disputed ? `Marked as disputed: ${d.reason}` : "Cleared a dispute";
+    case "obligation.cancel:success":
+      return `Cancelled an invoice or bill: ${d.reason}`;
+    case "obligations.write:denied":
+      return "Tried to change invoices or bills without permission";
+    case "ledger.classify:success":
+      return `Classified ${d.count} posted transaction(s)`;
+    case "ledger.classify:denied":
+      return "Tried to classify transactions without permission";
+    case "cash.manage:denied":
+      return "Tried to change cash records without permission";
     case "account.relabel:not_found":
       return "Tried to rename an account that is not in this business";
     default:

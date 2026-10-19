@@ -430,11 +430,17 @@ def test_another_business_cannot_see_or_touch_imports_or_ledger(biz):
     assert other.ledger() == [] and len(biz.ledger()) == 4
 
 
-def test_ledger_is_append_only():
-    for stmt in ("UPDATE ledger_transaction SET amount_minor = 1", "DELETE FROM ledger_transaction", "TRUNCATE ledger_transaction"):
+def test_ledger_is_append_only(biz):
+    biz.commit(biz.decide(biz.staged_part1(), 4, "exclude").json())
+    for stmt in ("UPDATE ledger_transaction SET amount_minor = 1", "DELETE FROM ledger_transaction"):
         with pytest.raises(DBAPIError, match="append-only"):
             with get_engine().begin() as conn:
                 conn.execute(text(stmt))
+    # TRUNCATE is refused too (by the append-only trigger, or first by tables that reference the ledger).
+    with pytest.raises(DBAPIError, match="append-only|referenced in a foreign key"):
+        with get_engine().begin() as conn:
+            conn.execute(text("TRUNCATE ledger_transaction"))
+    assert len(biz.ledger()) == 4
 
 
 # --- row normalization (pure) -------------------------------------------------------------------------

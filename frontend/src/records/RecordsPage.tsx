@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { fmtDate } from "../api";
 import { useSession } from "../auth/session";
+import { ACCOUNT_STATUS, type Position } from "../cash/types";
 import { formatMoney } from "../money";
 import { readErrors } from "../settings/apiErrors";
 import { exponentOf, Field, KIND_LABELS } from "../settings/fields";
@@ -18,86 +20,132 @@ type LedgerTxn = { id: string; business_date: string; amount_minor: number; curr
 
 const MONOGRAM: Record<string, string> = { bank: "BK", mobile_wallet: "WL", cash: "CA" };
 
+type ReviewItem = { key: string; to: string; title: string; detail: string; tags: [string, string][] };
+
 export function RecordsPage() {
   const { active, profile, options } = useSession();
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [pos, setPos] = useState<Position | null>(null);
   const [ledger, setLedger] = useState<{ total: number; transactions: LedgerTxn[] } | null>(null);
   const base = active ? `/api/businesses/${active.business_id}` : null;
 
   const load = useCallback(() => {
     if (!base) return;
     fetch(`${base}/records/summary`).then((r) => (r.ok ? r.json() : null)).then(setSummary);
+    fetch(`${base}/cash/position`).then((r) => (r.ok ? r.json() : null)).then(setPos);
     fetch(`${base}/ledger?limit=20`).then((r) => (r.ok ? r.json() : null)).then(setLedger);
   }, [base]);
   useEffect(load, [load]);
 
   if (!active) return null;
-  const fmtDate = (iso: string) => new Date(iso + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  const money = (m: number | null, c: string) => (m === null ? "Unknown" : formatMoney(m, c, exponentOf(options, c)));
+
+  // One review queue: staged imports, account reconciliation issues, and transfer problems.
+  const items: ReviewItem[] = [
+    ...(summary?.open_imports ?? []).map((i) => ({
+      key: i.id, to: `/records/imports/${i.id}`, title: i.source_name,
+      detail: `${i.account_label} · ${i.row_count} rows · uploaded by ${i.uploaded_by}`,
+      tags: [
+        ...(i.status === "needs_mapping" ? [["badge-warning", "Map columns"] as [string, string]] : []),
+        ...(i.error_rows > 0 ? [["badge-danger", `${i.error_rows} rejected`] as [string, string]] : []),
+        ...(i.pending_rows > 0 ? [["badge-warning", `${i.pending_rows} possible duplicate${i.pending_rows > 1 ? "s" : ""}`] as [string, string]] : []),
+      ],
+    })),
+    ...(pos?.accounts ?? []).filter((a) => a.issues.length > 0).map((a) => ({
+      key: a.account.id, to: `/records/accounts/${a.account.id}`, title: a.account.label,
+      detail: a.issues[0].message, tags: a.issues.map((i) => ["badge-warning", i.code.replace(/_/g, " ")] as [string, string]),
+    })),
+    ...((pos?.transfer_suggestions.length ?? 0) > 0
+      ? [{ key: "sugg", to: "/records/transfers", title: "Possible own-account transfers",
+           detail: `${pos!.transfer_suggestions.length} pair(s) look like money moved between your accounts.`, tags: [["badge-info", "Confirm pairs"] as [string, string]] }]
+      : []),
+  ];
 
   return (
     <>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Records</h1>
+          <h1 className="page-title">Records &amp; reconciliation</h1>
           <p className="page-sub">Review sources and confirm what can be used in calculations</p>
+        </div>
+        <div className="header-actions">
+          <Link to="/records/obligations" className="btn btn-ghost">Invoices &amp; bills</Link>
+          <Link to="/records/transfers" className="btn btn-ghost">Transfers</Link>
         </div>
       </div>
 
       <UploadCard accounts={profile?.accounts ?? []} />
+
+      {pos && pos.totals.length > 0 && (
+        <section className="card" aria-labelledby="position-title">
+          <h2 id="position-title" className="card-title">Usable cash by currency</h2>
+          <div className="currency-grid">
+            {pos.totals.map((t) => (
+              <div key={t.currency} className="currency-total">
+                <span className="kpi-label">Spendable now · {t.currency}</span>
+                <span className="kpi-value num">{money(t.spendable_minor, t.currency)}</span>
+                <span className="muted small">
+                  From {t.included.length} verified account{t.included.length === 1 ? "" : "s"}, after {money(t.restricted_minor, t.currency)} restricted.
+                </span>
+                {(t.stale.length > 0 || t.missing.length > 0) && (
+                  <span className="excluded small">
+                    Not included: {[...t.stale.map((s) => `${s.label} (stale)`), ...t.missing.map((m) => `${m.label} (no balance)`)].join(", ")}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="muted small">Only accounts verified within {pos.fresh_max_age_days} days are added up. Currencies are never combined.</p>
+        </section>
+      )}
 
       <div className="split split-even">
         <section className="card" aria-labelledby="connected-title">
           <h2 id="connected-title" className="card-title">Connected records</h2>
           <div className="table-wrap">
             <table className="table">
-              <thead><tr><th>Source</th><th>Posted</th><th>Latest record</th><th>Status</th></tr></thead>
+              <thead><tr><th>Source</th><th>Last verified</th><th className="right">Usable</th><th>Status</th></tr></thead>
               <tbody>
-                {summary?.accounts.map((a) => (
-                  <tr key={a.id}>
-                    <td>
-                      <span className="source">
-                        <span className="nav-mono" aria-hidden="true">{MONOGRAM[a.kind] ?? "AC"}</span>
-                        <span><strong>{a.label}</strong><span className="muted small block">{KIND_LABELS[a.kind]} · {a.currency}</span></span>
-                      </span>
-                    </td>
-                    <td className="num">{a.posted_transactions}</td>
-                    <td>{a.latest_business_date ? fmtDate(a.latest_business_date) : <span className="muted">—</span>}</td>
-                    <td>
-                      {a.posted_transactions
-                        ? <span className="badge badge-info" title="Balances are reconciled in a later step">Imported · not reconciled</span>
-                        : <span className="badge badge-muted">No records</span>}
-                    </td>
-                  </tr>
-                ))}
+                {(pos?.accounts ?? []).map((a) => {
+                  const posted = summary?.accounts.find((s) => s.id === a.account.id)?.posted_transactions ?? 0;
+                  const [cls, label] = ACCOUNT_STATUS[a.status];
+                  return (
+                    <tr key={a.account.id}>
+                      <td>
+                        <Link to={`/records/accounts/${a.account.id}`} className="source source-link">
+                          <span className="nav-mono" aria-hidden="true">{MONOGRAM[a.account.kind] ?? "AC"}</span>
+                          <span><strong>{a.account.label}</strong>
+                            <span className="muted small block">{KIND_LABELS[a.account.kind]} · {a.account.currency} · {posted} posted</span></span>
+                        </Link>
+                      </td>
+                      <td className="nowrap">{a.evidence_through ? fmtDate(a.evidence_through) : <span className="muted">Not counted</span>}</td>
+                      <td className="num right">{money(a.usable_minor, a.account.currency)}</td>
+                      <td><span className={`badge ${cls}`}>{label}</span></td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
-          <p className="muted small">Reconciliation against statement balances is not built yet (Prompt 05). Counts include posted rows only.</p>
+          <p className="muted small">Open an account to enter statement balances, declare coverage, and add restricted funds.</p>
         </section>
 
         <section className="card" aria-labelledby="review-title">
           <div className="card-head">
             <h2 id="review-title" className="card-title">Items to review</h2>
-            {summary && <span className={`badge ${summary.open_imports.length ? "badge-warning" : "badge-success"}`}>
-              {summary.open_imports.length ? `${summary.open_imports.length} open` : "Nothing open"}</span>}
+            {summary && pos && <span className={`badge ${items.length ? "badge-warning" : "badge-success"}`}>
+              {items.length ? `${items.length} unresolved` : "Nothing open"}</span>}
           </div>
-          {summary?.open_imports.length === 0 && <p className="muted">No staged imports are waiting.</p>}
+          {summary && pos && items.length === 0 && <p className="muted">Nothing needs review.</p>}
           <ol className="review-list">
-            {summary?.open_imports.map((i, n) => (
-              <li key={i.id}>
-                <Link to={`/records/imports/${i.id}`} className="review-item">
+            {items.map((i, n) => (
+              <li key={i.key}>
+                <Link to={i.to} className="review-item">
                   <span className="review-num">{String(n + 1).padStart(2, "0")}</span>
                   <span>
-                    <strong>{i.source_name}</strong>
-                    <span className="muted small block">
-                      {i.account_label} · {i.row_count} rows · uploaded by {i.uploaded_by}
-                    </span>
-                    <span className="review-tags">
-                      {i.status === "needs_mapping" && <span className="badge badge-warning">Map columns</span>}
-                      {i.error_rows > 0 && <span className="badge badge-danger">{i.error_rows} rejected</span>}
-                      {i.pending_rows > 0 && <span className="badge badge-warning">{i.pending_rows} possible duplicate{i.pending_rows > 1 ? "s" : ""}</span>}
-                      {i.status === "staged" && <span className="badge badge-info">{i.included_rows} selected</span>}
-                    </span>
+                    <strong>{i.title}</strong>
+                    <span className="muted small block">{i.detail}</span>
+                    <span className="review-tags">{i.tags.map(([c, t], k) => <span key={k} className={`badge ${c}`}>{t}</span>)}</span>
                   </span>
                 </Link>
               </li>

@@ -3,10 +3,15 @@
 
 export type ParseResult = { ok: true; minor: number } | { ok: false; error: string };
 
-export function parseMajorToMinor(input: string, exponent: number, maxMinor: number): ParseResult {
-  const cleaned = input.replace(/[,\s৳]/g, "");
+export function parseMajorToMinor(input: string, exponent: number, maxMinor: number, allowNegative = false): ParseResult {
+  let cleaned = input.replace(/[,\s৳]/g, "");
   if (cleaned === "") return { ok: false, error: "Enter an amount." };
-  if (cleaned.startsWith("-")) return { ok: false, error: "The amount cannot be negative." };
+  if (cleaned.startsWith("-")) {
+    if (!allowNegative) return { ok: false, error: "The amount cannot be negative." };
+    const inner = parseMajorToMinor(cleaned.slice(1), exponent, maxMinor);
+    return inner.ok ? { ok: true, minor: -inner.minor } : inner;
+  }
+  cleaned = cleaned.replace(/^\+/, "");
   const m = /^(\d+)(?:\.(\d+))?$/.exec(cleaned);
   if (!m) return { ok: false, error: "Use digits only, for example 80,000.00." };
   const frac = m[2] ?? "";

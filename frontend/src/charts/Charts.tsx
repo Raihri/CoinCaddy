@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // Validated categorical pair (dataviz validator, light surface #FFFFFF): blue #2347A5, orange #eb6834.
 export const SERIES = ["var(--series-1)", "var(--series-2)"];
@@ -104,79 +104,138 @@ export function BarPairChart({ labels, series, format, axisFormat, caption }: {
   );
 }
 
-/** Lines on one shared axis, an optional labelled reference line (e.g. reserve), crosshair tooltip. */
-export function LineChart({ labels, series, format, axisFormat, caption, reference, markers }: {
-  labels: string[]; series: Series[]; format: (v: number) => string; axisFormat: (v: number) => string; caption: string;
-  reference?: { value: number; label: string }; markers?: { index: number; label: string }[];
+export type LineSeries = { name: string; values: (number | null)[]; color: string; dashed?: boolean; marker?: "circle" | "square" };
+
+const DAY_MS = 86_400_000;
+const isoDay = (iso: string) => Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10)) / DAY_MS;
+const shortDate = (iso: string) => new Date(iso + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+const longDate = (iso: string) => new Date(iso + "T00:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+
+/** Time-series line chart (design.md: 2px strokes, no area fill, explicit axis labels with currency, solid legend).
+ *  The x axis is a true date scale: each point sits at its date, and ticks fall on fixed day intervals from the first
+ *  date. Point markers are drawn only on `markDates`; direct end labels, an optional labelled reference line
+ *  (e.g. the reserve), a crosshair tooltip that snaps to the nearest date, and a table view.
+ *  The legend is rendered by the page (the mockup places it in the card header). */
+export function TimeSeriesChart({ dates, series, format, axisFormat, caption, unit, xCaption, reference, markDates, tickDays = 14 }: {
+  dates: string[]; series: LineSeries[]; format: (v: number) => string; axisFormat: (v: number) => string; caption: string;
+  unit: string; xCaption: string; reference?: { value: number; label: string; color: string }; markDates?: Set<string>; tickDays?: number;
 }) {
   const [hover, setHover] = useState<number | null>(null);
   const [asTable, setAsTable] = useState(false);
-  const W = 640, H = 280, L = 70, R = 16, T = 16, B = 28;
+  // Fewer date ticks when the chart is narrow (the SVG scales down, so labels would collide).
+  const frameRef = useRef<HTMLDivElement>(null);
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const el = frameRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setNarrow(el.clientWidth < 520));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [asTable]);
+  const tickEvery = narrow ? tickDays * 2 : tickDays;
+  // Taller drawing area when narrow, so scaled-up labels have room.
+  const W = 640, H = narrow ? 460 : 300, L = 56, R = 76, T = narrow ? 52 : 36, B = narrow ? 64 : 40;
   const all = series.flatMap((s) => s.values.filter((v): v is number => v !== null)).concat(reference ? [reference.value] : []);
   const rawMin = Math.min(0, ...all), rawMax = Math.max(1, ...all);
-  const max = niceMax(rawMax), min = rawMin < 0 ? -niceMax(-rawMin) : 0;
-  const x = (i: number) => L + ((W - L - R) * i) / Math.max(1, labels.length - 1);
+  // Round value step, axis bounds on whole steps (always including zero).
+  const step = niceMax((rawMax - rawMin) / 4);
+  const min = Math.floor(rawMin / step) * step, max = Math.ceil(rawMax / step) * step;
+  const valueTicks = Array.from({ length: Math.round((max - min) / step) + 1 }, (_, i) => min + i * step);
+  const day0 = isoDay(dates[0]), dayN = isoDay(dates[dates.length - 1]);
+  const xDay = (d: number) => L + ((W - L - R) * (d - day0)) / Math.max(1, dayN - day0);
+  const x = (i: number) => xDay(isoDay(dates[i]));
   const y = (v: number) => T + (H - T - B) * (1 - (v - min) / (max - min));
-  const every = Math.ceil(labels.length / 7);
+  // Date ticks every `tickDays` days from the first date; the last date is always labelled, dropping a tick that would collide.
+  const dateTicks: string[] = [];
+  for (let d = day0; d <= dayN; d += tickEvery) dateTicks.push(new Date(d * DAY_MS).toISOString().slice(0, 10));
+  if (dayN - isoDay(dateTicks[dateTicks.length - 1]) < tickEvery * 0.75) dateTicks.pop();
+  dateTicks.push(dates[dates.length - 1]);
+  const last = dates.length - 1;
+  const ends = series.map((s, si) => ({ si, y: y(s.values[last] ?? 0) })).sort((a, b) => a.y - b.y);
+  for (let k = 1; k < ends.length; k++) if (ends[k].y - ends[k - 1].y < 16) ends[k].y = ends[k - 1].y + 16;
+  const endY = Object.fromEntries(ends.map((e) => [e.si, e.y]));
+  const marker = (s: LineSeries, cx: number, cy: number, key: string | number, r = 4) =>
+    s.marker === "square"
+      ? <rect key={key} x={cx - r} y={cy - r} width={2 * r} height={2 * r} rx={1.5} fill={s.color} stroke="var(--surface)" strokeWidth={2} />
+      : <circle key={key} cx={cx} cy={cy} r={r} fill={s.color} stroke="var(--surface)" strokeWidth={2} />;
+  const nearest = (px: number) => {
+    let best = 0;
+    for (let i = 1; i < dates.length; i++) if (Math.abs(x(i) - px) < Math.abs(x(best) - px)) best = i;
+    return best;
+  };
+
   return (
     <figure className="chart">
-      <div className="chart-tools">
-        <Legend series={series} extra={reference ? { label: reference.label, dashed: true } : undefined} />
-        <button type="button" className="btn btn-ghost btn-small" onClick={() => setAsTable((v) => !v)}>{asTable ? "Show chart" : "Show table"}</button>
-      </div>
-      {asTable ? <TableView labels={labels} series={series} format={format} caption={caption} /> : (
-        <div className="chart-frame" onMouseLeave={() => setHover(null)}>
+      {asTable ? (
+        <div className="table-wrap">
+          <table className="table">
+            <caption className="sr-only">{caption}</caption>
+            <thead><tr><th>Date</th>{series.map((s) => <th key={s.name} className="right">{s.name}</th>)}</tr></thead>
+            <tbody>{dates.map((d, i) => (
+              <tr key={d}><td className="nowrap">{shortDate(d)}</td>{series.map((s) => <td key={s.name} className="num right">{s.values[i] === null ? "—" : format(s.values[i]!)}</td>)}</tr>
+            ))}</tbody>
+          </table>
+        </div>
+      ) : (
+        <div className="chart-frame" ref={frameRef} onMouseLeave={() => setHover(null)}>
           <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={caption} className="chart-svg"
                onMouseMove={(e) => {
                  const box = (e.currentTarget as SVGSVGElement).getBoundingClientRect();
-                 const px = ((e.clientX - box.left) / box.width) * W;
-                 setHover(Math.max(0, Math.min(labels.length - 1, Math.round(((px - L) / (W - L - R)) * (labels.length - 1)))));
+                 setHover(nearest(((e.clientX - box.left) / box.width) * W));
                }}>
-            {ticks(min, max).map((t) => (
+            <text x={L - 8} y={T - (narrow ? 28 : 12)} className="axis-label axis-unit" textAnchor="end">{unit}</text>
+            {valueTicks.map((t) => (
               <g key={t}>
-                <line x1={L} x2={W - R} y1={y(t)} y2={y(t)} className="grid" />
+                <line x1={L} x2={W - R} y1={y(t)} y2={y(t)} className={t === 0 && min < 0 ? "baseline" : "grid"} />
                 <text x={L - 8} y={y(t) + 4} className="axis-label" textAnchor="end">{axisFormat(t)}</text>
               </g>
             ))}
-            {labels.map((lab, i) => (i % every === 0 || i === labels.length - 1) && (
-              <text key={lab} x={x(i)} y={H - 8} className="axis-label" textAnchor="middle">{lab}</text>
+            {dateTicks.map((d) => (
+              <g key={d}>
+                <line x1={xDay(isoDay(d))} x2={xDay(isoDay(d))} y1={H - B} y2={H - B + 4} className="baseline" />
+                <text x={xDay(isoDay(d))} y={H - B + (narrow ? 24 : 16)} className="axis-label" textAnchor="middle">{shortDate(d)}</text>
+              </g>
             ))}
-            {min < 0 && <line x1={L} x2={W - R} y1={y(0)} y2={y(0)} className="baseline" />}
+            <text x={(L + W - R) / 2} y={H - 4} className="axis-label axis-caption" textAnchor="middle">{xCaption}</text>
             {reference && (
               <g>
-                <line x1={L} x2={W - R} y1={y(reference.value)} y2={y(reference.value)} className="ref-line" />
-                <text x={W - R} y={y(reference.value) - 6} className="ref-label" textAnchor="end">{reference.label}</text>
+                <line x1={L} x2={W - R} y1={y(reference.value)} y2={y(reference.value)} stroke={reference.color} strokeWidth={1.5} />
+                <text x={W - R - 4} y={y(reference.value) - 6} className="ref-label" textAnchor="end" fill={reference.color}>{reference.label}</text>
               </g>
             )}
-            {series.map((s, si) => (
-              <polyline key={s.name} fill="none" stroke={SERIES[si]} strokeWidth={2} strokeLinejoin="round"
+            {series.map((s) => (
+              <polyline key={s.name} fill="none" stroke={s.color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round"
+                        strokeDasharray={s.dashed ? "6 4" : undefined}
                         points={s.values.map((v, i) => (v === null ? null : `${x(i)},${y(v)}`)).filter(Boolean).join(" ")} />
             ))}
-            {markers?.map((m) => (
-              <g key={m.label}>
-                <circle cx={x(m.index)} cy={y(series[0].values[m.index] ?? 0)} r={5} className="breach-dot" />
-              </g>
+            {series.map((s) => s.values.map((v, i) => v !== null && (i === 0 || i === last || markDates?.has(dates[i])) && marker(s, x(i), y(v), `${s.name}-${i}`, 3.5)))}
+            {series.map((s, si) => (
+              <text key={s.name} x={W - R + 8} y={endY[si] + 4} className="end-label">{s.name}</text>
             ))}
             {hover !== null && (
               <g>
                 <line x1={x(hover)} x2={x(hover)} y1={T} y2={H - B} className="crosshair" />
-                {series.map((s, si) => s.values[hover] !== null && (
-                  <circle key={s.name} cx={x(hover)} cy={y(s.values[hover]!)} r={4} fill={SERIES[si]} stroke="var(--surface)" strokeWidth={2} />
-                ))}
+                {series.map((s) => s.values[hover] !== null && marker(s, x(hover), y(s.values[hover]!), `h-${s.name}`, 5))}
               </g>
             )}
           </svg>
           {hover !== null && (
-            <div className="chart-tip" style={{ left: `${(x(hover) / W) * 100}%` }}>
-              <strong>{labels[hover]}</strong>
-              {series.map((s, si) => (
-                <span key={s.name} className="tip-row"><span className="legend-swatch" style={{ background: SERIES[si] }} />{s.name}: {s.values[hover] === null ? "—" : format(s.values[hover]!)}</span>
+            <div className={`chart-tip ${x(hover) / W > 0.6 ? "tip-left" : ""}`} style={{ left: `${(x(hover) / W) * 100}%` }}>
+              <strong>{longDate(dates[hover])}</strong>
+              {series.map((s) => (
+                <span key={s.name} className="tip-row">
+                  <span className={`legend-line-swatch ${s.dashed ? "dashed" : ""}`} style={{ borderColor: s.color }} />
+                  {s.name}: {s.values[hover] === null ? "—" : format(s.values[hover]!)}
+                </span>
               ))}
               {reference && <span className="tip-row muted">{reference.label}: {format(reference.value)}</span>}
             </div>
           )}
         </div>
       )}
+      <div className="chart-foot">
+        <button type="button" className="link-button" onClick={() => setAsTable((v) => !v)}>{asTable ? "View as chart" : "View as table"}</button>
+      </div>
     </figure>
   );
 }

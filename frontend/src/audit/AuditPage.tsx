@@ -124,6 +124,10 @@ function describe(e: AuditEvent): string {
       return `Classified ${d.count} posted transaction(s)`;
     case "ledger.classify:denied":
       return "Tried to classify transactions without permission";
+    case "outlook.snapshot:success":
+      return `Calculated a cash outlook for ${d.as_of}${d.expected_breach ? " (reserve breach on the expected path)" : d.cautious_breach ? " (breach only on the cautious path)" : ""}`;
+    case "outlook.run:denied":
+      return "Tried to calculate a cash outlook without permission";
     case "cash.manage:denied":
       return "Tried to change cash records without permission";
     case "account.relabel:not_found":

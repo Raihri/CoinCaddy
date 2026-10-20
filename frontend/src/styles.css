@@ -251,7 +251,8 @@ body {
 .currency-total { display: grid; gap: 4px; padding: 16px; border-radius: 12px; background: var(--surface-muted); }
 .excluded { color: var(--warning); font-weight: 500; }
 .issue-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
-.issue-list li { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.issue-list li { display: flex; gap: 8px; align-items: flex-start; }
+.issue-list li > .badge { flex: none; margin-top: 1px; }
 .stack-form { display: grid; gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
 .form-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .chip-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
@@ -319,3 +320,60 @@ tr.total-row td { font-weight: 600; border-top: 2px solid var(--border); }
 .split-wide { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
 @media (max-width: 900px) { .split-wide { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 600px) { .chart-svg .axis-label, .chart-svg .ref-label { font-size: 20px; } }
+
+/* Cash Outlook (layout: images/04-cash-outlook.png; tokens: design.md) */
+.section-title { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: var(--tight); line-height: 1.3; }
+.banner { display: flex; gap: 16px; align-items: flex-start; padding: 20px 24px; border-radius: 12px; border: 1px solid var(--border); }
+.banner-body { display: grid; gap: 4px; min-width: 0; }
+.banner-body strong { font-size: 17px; font-weight: 600; letter-spacing: var(--tight); line-height: 1.3; }
+.banner-line { font-weight: 500; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.banner-note { font-size: 13px; color: var(--text-secondary); }
+.banner-warning { background: var(--warning-soft); border-color: var(--warning-soft); }
+.banner-warning .banner-line { color: var(--warning); }
+.banner-success { background: var(--success-soft); border-color: var(--success-soft); }
+.banner-success .banner-line { color: var(--success); }
+.banner-icon { width: 36px; height: 36px; flex: none; border-radius: 8px; display: grid; place-items: center; font-weight: 700;
+               background: var(--surface); border: 1px solid var(--border); }
+.banner-warning .banner-icon { color: var(--warning); }
+.banner-success .banner-icon { color: var(--success); }
+.stale-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+             padding: 10px 14px; border-radius: 8px; background: var(--info-soft); color: var(--info); font-weight: 500; }
+.outlook-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.outlook-grid .card-head { margin-bottom: 8px; flex-wrap: wrap; }
+.legend-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.legend-pill { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 16px; font-size: 12px; font-weight: 600; }
+.pill-expected { background: var(--primary-soft); color: var(--primary); }
+.pill-cautious { background: var(--info-soft); color: var(--info); }
+.legend-line-swatch { display: inline-block; width: 16px; border-top: 2px solid; flex: none; }
+.legend-line-swatch.dashed { border-top-style: dashed; }
+.chart-svg .end-label { font-size: 12px; font-weight: 600; fill: var(--text-primary); letter-spacing: 0; }
+.chart-svg .axis-unit { font-weight: 600; }
+.chart-foot { display: flex; justify-content: flex-end; }
+.link-button { font: inherit; font-size: 12px; font-weight: 500; color: var(--primary); background: none; border: 0; padding: 0;
+               cursor: pointer; text-decoration: underline; }
+.chart-tip.tip-left { transform: translateX(calc(-100% - 12px)); }
+.mockup-moves li + li { margin-top: 0; }
+.mockup-moves .movement { padding: 14px 0; align-items: flex-end; }
+.movement-text { display: grid; gap: 4px; min-width: 0; }
+.movement-date { font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.movement-title { font-size: 14px; overflow-wrap: anywhere; }
+.movement-amount { flex: none; white-space: nowrap; font-weight: 600; }
+.pos-in { color: var(--success); }
+.tiny-badge { font-size: 11px; padding: 1px 6px; }
+.daily-table { max-height: 384px; overflow-y: auto; }
+.daily-table thead th { position: sticky; top: 0; }
+.account-lines { list-style: none; margin: 0; padding: 0; }
+.account-lines li { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.account-name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.account-figs { display: grid; gap: 2px; justify-items: end; font-size: 13px; color: var(--text-secondary); }
+.account-figs strong { color: var(--text-primary); }
+.empty-state { display: grid; gap: 12px; justify-items: start; }
+@media (max-width: 900px) {
+  .outlook-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .banner { padding: 16px; }
+}
+@media (max-width: 600px) { .chart-svg .end-label { font-size: 20px; } .account-figs { justify-items: start; } }
+.nowrap { white-space: nowrap; }
+.excluded-amounts { display: grid; justify-items: end; gap: 2px; flex: none; }
+.chart-svg .axis-caption { font-size: 11px; fill: var(--text-secondary); }
+@media (max-width: 600px) { .chart-svg .axis-caption { font-size: 18px; } }

@@ -49,7 +49,7 @@ export function FinancialHealthPage() {
   const currency = profile?.base_currency ?? "BDT";
   const exp = exponentOf(options, currency);
   const money = (m: number) => formatMoney(m, currency, exp);
-  const short = (m: number) => `${Math.round(m / 10 ** exp / 1000).toLocaleString("en-IN")}k`;
+  const short = (m: number) => (m === 0 ? "0" : `${Math.round(m / 10 ** exp / 1000).toLocaleString("en-IN")}k`);
 
   const load = useCallback(async () => {
     if (!base) return;
@@ -177,7 +177,7 @@ export function FinancialHealthPage() {
             {Object.entries(s.excluded).map(([k, v]) => (
               <li key={k}><button type="button" className="movement movement-button" onClick={() => open(k)}>
                 <span><strong>{EXCLUDED_LABELS[k] ?? k}</strong><span className="muted small block">{v.transaction_ids.length} records</span></span>
-                <span className="num">in {money(v.in_minor)} · out {money(v.out_minor)}</span>
+                <span className="num excluded-amounts"><span className="nowrap">in {money(v.in_minor)}</span> <span className="nowrap">out {money(v.out_minor)}</span></span>
               </button></li>
             ))}
           </ul>

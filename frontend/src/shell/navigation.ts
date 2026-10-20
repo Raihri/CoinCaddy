@@ -12,7 +12,7 @@ export const DESTINATIONS: Destination[] = [
   { path: "/overview", label: "Overview", monogram: "OV", available: false, plannedIn: "Prompt 09 (alerts) and later" },
   { path: "/records", label: "Records", monogram: "RC", available: true, plannedIn: "Prompts 05-06 (reconciliation, obligations)" },
   { path: "/financial-health", label: "Financial Health", monogram: "FH", available: true, plannedIn: "Prompt 07" },
-  { path: "/cash-outlook", label: "Cash Outlook", monogram: "CO", available: false, plannedIn: "Prompt 08" },
+  { path: "/cash-outlook", label: "Cash Outlook", monogram: "CO", available: true, plannedIn: "Prompt 08" },
   { path: "/payment-review", label: "Payment Review", monogram: "PR", available: false, plannedIn: "Prompt 10" },
   { path: "/funding-matches", label: "Funding Matches", monogram: "FM", available: false, plannedIn: "Prompt 12" },
   { path: "/fraud-monitor", label: "Fraud Monitor", monogram: "FR", available: false, plannedIn: "Prompt 16" },

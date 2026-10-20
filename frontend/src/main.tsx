@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AuditPage } from "./audit/AuditPage";
 import { FinancialHealthPage } from "./health/FinancialHealthPage";
+import { CashOutlookPage } from "./outlook/CashOutlookPage";
 import { ImportDetailPage } from "./records/ImportDetailPage";
 import { RecordsPage } from "./records/RecordsPage";
 import { AccountPage } from "./cash/AccountPage";
@@ -33,6 +34,7 @@ function App() {
         <Route path="/approvals-audit" element={<AuditPage />} />
         <Route path="/records" element={<RecordsPage />} />
         <Route path="/financial-health" element={<FinancialHealthPage />} />
+        <Route path="/cash-outlook" element={<CashOutlookPage />} />
         <Route path="/records/imports/:batchId" element={<ImportDetailPage />} />
         <Route path="/records/accounts/:accountId" element={<AccountPage />} />
         <Route path="/records/transfers" element={<TransfersPage />} />

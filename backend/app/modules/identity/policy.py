@@ -36,6 +36,8 @@ ROLE_MATRIX: dict[str, frozenset[str]] = {
     "obligations.write": frozenset({"owner", "bookkeeper"}),
     # Classify posted transactions (operating receipt/payment category, financing, owner money).
     "ledger.classify": frozenset({"owner", "bookkeeper"}),
+    # Calculate a new Cash Outlook snapshot (reading outlooks only needs records.read).
+    "outlook.run": frozenset({"owner", "bookkeeper"}),
     # Read the business's audit history.
     "audit.read": frozenset({"owner", "bookkeeper"}),
 }

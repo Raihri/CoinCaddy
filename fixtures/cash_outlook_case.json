@@ -1,0 +1,31 @@
+{
+  "notes": "Hand-checked Cash Outlook case (outlook-v1). Frozen-input format exactly as stored in a snapshot. Worked expected values: cash_outlook_expected.md.",
+  "inputs": {
+    "calc_version": "outlook-v1",
+    "as_of": "2026-10-20",
+    "base_currency": "BDT",
+    "reserve": { "amount_minor": 8000000, "currency": "BDT" },
+    "accounts": [
+      { "id": "acc-bank", "label": "Bank", "currency": "BDT", "usable_minor": 10000000, "freshness": "fresh",
+        "evidence_through": "2026-10-19", "uncovered_minor": 0, "uncovered_count": 0, "anchor_id": "an-1",
+        "restriction_releases": [ { "id": "rf-1", "amount_minor": 500000, "reason": "Deposit", "effective_to": "2026-11-14" } ] },
+      { "id": "acc-wallet", "label": "Wallet", "currency": "BDT", "usable_minor": 1000000, "freshness": "stale",
+        "evidence_through": "2026-10-01", "uncovered_minor": 0, "uncovered_count": 0, "anchor_id": "an-2", "restriction_releases": [] },
+      { "id": "acc-cash", "label": "Cash", "currency": "BDT", "usable_minor": null, "freshness": "no_anchor",
+        "evidence_through": null, "uncovered_minor": 0, "uncovered_count": 0, "anchor_id": null, "restriction_releases": [] }
+    ],
+    "obligations": [
+      { "id": "R1", "direction": "receivable", "party": "Eastline", "document_number": "INV-1", "due_date": "2026-10-25",
+        "outstanding_minor": 5000000, "currency": "BDT", "disputed": false, "settlement_account_id": "acc-bank" },
+      { "id": "R2", "direction": "receivable", "party": "Meghna", "document_number": "INV-2", "due_date": "2026-10-10",
+        "outstanding_minor": 3000000, "currency": "BDT", "disputed": false, "settlement_account_id": "acc-bank" },
+      { "id": "R3", "direction": "receivable", "party": "Karim", "document_number": "INV-3", "due_date": "2026-10-22",
+        "outstanding_minor": 2000000, "currency": "BDT", "disputed": true, "settlement_account_id": "acc-bank" },
+      { "id": "P1", "direction": "payable", "party": "Delta", "document_number": "BILL-1", "due_date": "2026-10-27",
+        "outstanding_minor": 7000000, "currency": "BDT", "disputed": false, "settlement_account_id": "acc-bank" },
+      { "id": "P2", "direction": "payable", "party": "Landlord", "document_number": "RENT-1", "due_date": "2026-10-15",
+        "outstanding_minor": 1500000, "currency": "BDT", "disputed": false, "settlement_account_id": null }
+    ],
+    "unmatched_transfers": []
+  }
+}

@@ -15,7 +15,8 @@
 | 05 | Trusted Cash Reconstruction | **Done — verified locally** |
 | 06 | Receivables and Payables Ledger | **Done — verified locally** |
 | 07 | Financial Health | **Done — verified locally** |
-| 08–22 | Cash Outlook through Region Pack | Not started |
+| 08 | Cash Outlook | **Done — verified locally** |
+| 09–22 | Smart Alerts through Region Pack | Not started |
 
 ## Prompt 00 — runnable foundation
 
@@ -285,11 +286,11 @@
   - **Validation (≈30 cases):** future, pre-2000, foreign-currency, float, and string anchors; same-day duplicate → 409; void requires a reason and works only once; bad and over-long coverage periods; an import from another account or not including its rows; zero or negative restrictions and bad dates; every transfer rule.
   - **Permissions and data integrity:** staff → 403 on all changes but can read; a bookkeeper can add. Another business → 404 on the position, foreign accounts, anchors, and transactions. Direct SQL UPDATE/DELETE on anchors, coverage, and transfers is rejected by the trigger. Interval merge/gap unit tests.
 - **Browser run (real UI, demo business; today is 20 Oct 2026):**
-  - Amina entered a balance dated 2999-01-01 and got the server error "must be between 2000-01-01 and today…". She then entered 01 Oct ৳ 1,85,000.00 and 15 Oct ৳ 1,79,549.75.
+  - Amina entered a balance dated 2999-01-01 and got the server error "must be between 2000-01-01 and today…". She then entered 01 Oct BDT 1,85,000.00 and 15 Oct BDT 1,79,549.75.
   - The period showed **"Zero residual, coverage incomplete"** with gap 02–15 Oct. After declaring coverage 02–15 Oct it became **Balanced** (movements −5,450.25 over 6 rows, residual 0.00).
-  - A ৳ 20,000 security deposit gave usable **৳ 1,59,549.75**.
+  - A BDT 20,000 security deposit gave usable **BDT 1,59,549.75**.
   - The wallet got a 30 Sep balance (→ **Stale**). The bank's "Transfer to wallet" was declared one-sided → **Unmatched · incoming side missing**.
-  - The Records page then showed bank *Needs review*, wallet *Stale*, cash box *Missing balance*. **Spendable now ৳ 0.00**, because no account is verified within 2 days, and all three are listed as not included. Items to review listed all three.
+  - The Records page then showed bank *Needs review*, wallet *Stale*, cash box *Missing balance*. **Spendable now BDT 0.00**, because no account is verified within 2 days, and all three are listed as not included. Items to review listed all three.
   - Chaya (staff) saw the account page without any entry forms.
   - Screenshots checked on desktop and at 390×844. A small fix was made after review: links styled as buttons are no longer underlined.
 
@@ -299,7 +300,7 @@
 - Verified balances rely on people declaring coverage honestly. The system cannot prove a statement is complete; it only refuses to assume completeness.
 - Transfer suggestions need exact amounts and ≤ 3 days. Transfers with fees (different amounts) must be linked manually; that is allowed only when amounts are equal, so fee-bearing transfers cannot be linked yet.
 - Restricted funds are not checked against overlapping restrictions. Voided entries remain visible only in the audit trail, not on the account page.
-- Demo database state after the browser run: Northstar bank anchors 01/15 Oct, coverage 02–15 Oct, a ৳ 20,000 restriction, a wallet anchor of 30 Sep, and one unmatched "Transfer to wallet" (the wallet side was never imported).
+- Demo database state after the browser run: Northstar bank anchors 01/15 Oct, coverage 02–15 Oct, a BDT 20,000 restriction, a wallet anchor of 30 Sep, and one unmatched "Transfer to wallet" (the wallet side was never imported).
 
 ## Prompt 06 — Receivables and Payables Ledger
 
@@ -328,12 +329,12 @@
 - **Real bug found by the tests and fixed:** PostgreSQL `sum()` over bigint returns `numeric`, so the "transaction has only N left" 409 failed to serialize (500). It is now converted to an integer.
 - **Browser run (real UI, demo business):**
   - **Invoice entry:** Amina entered INV-104 with a due date before the issue date → the server error "due_date must not be before issue_date" appeared under the field. The corrected invoice opened its detail page.
-  - **Payment and reversal:** a ৳ 20,000 part payment → outstanding ৳ 30,000. A ৳ 40,000 payment was blocked ("More than the outstanding amount"). **Reverse** with the reason "Payment sent to wrong invoice" → outstanding back to ৳ 50,000, and the original payment row is shown as "Payment (reversed)".
+  - **Payment and reversal:** a BDT 20,000 part payment → outstanding BDT 30,000. A BDT 40,000 payment was blocked ("More than the outstanding amount"). **Reverse** with the reason "Payment sent to wrong invoice" → outstanding back to BDT 50,000, and the original payment row is shown as "Payment (reversed)".
   - **Demo data:** further invoices and bills were entered through the API as Amina (audited). INV-101 and BILL-201 were settled by linking the posted bank transactions, and INV-099 was disputed.
-  - **Records page:** Customer dues = this week ৳ 50,000, overdue 1–30 ৳ 56,000, 30+ ৳ 0, later ৳ 47,000, **disputed ৳ 26,000 separately**, total ৳ 1,79,000. Upcoming supplier payments listed BILL-210, PAY-OCT, RENT-NOV, LOAN-0507 (৳ 1,96,000).
+  - **Records page:** Customer dues = this week BDT 50,000, overdue 1–30 BDT 56,000, 30+ BDT 0, later BDT 47,000, **disputed BDT 26,000 separately**, total BDT 1,79,000. Upcoming supplier payments listed BILL-210, PAY-OCT, RENT-NOV, LOAN-0507 (BDT 1,96,000).
   - **Staff:** Chaya had no "New" button, and an API create → 403.
   - **UI fix after review:** a stale payment-form error now clears when the balance changes.
-- **Housekeeping (honest note):** my Prompt 06 browser script accidentally re-ran the Prompt 05 script, adding a second ৳ 20,000 restriction and a duplicate coverage period to the demo bank (duplicate balances were refused with 409). Both duplicates were **voided through the API as Amina** with the reason "Duplicate entry created by a test script re-run", which is visible in the audit trail. The demo again has one restriction and one coverage period.
+- **Housekeeping (honest note):** my Prompt 06 browser script accidentally re-ran the Prompt 05 script, adding a second BDT 20,000 restriction and a duplicate coverage period to the demo bank (duplicate balances were refused with 409). Both duplicates were **voided through the API as Amina** with the reason "Duplicate entry created by a test script re-run", which is visible in the audit trail. The demo again has one restriction and one coverage period.
 
 ### Known gaps and risks
 
@@ -369,9 +370,9 @@
   - **Cross-business isolation:** another business gets 404 on the summary and drill-down, its own summary has 0 records (nothing leaks), and staff can read.
   - **Month validation:** 5 invalid months → 422.
 - **Browser run (real UI, demo business):**
-  - **Before classifying:** Financial health for Oct 2026 showed the **Incomplete** banner: "5 posted transaction(s) … not classified (৳ 86,500.00 in, ৳ 81,950.25 out)". The margin was "Not available". Two suggestions were pre-filled ("Paid INV-101", "Paid BILL-201"). The transfer to the wallet showed as an own-account transfer.
-  - **After choosing rent, utilities, and sales and saving:** receipts **৳ 86,500.00**, payments **৳ 81,950.25**, margin **5.26%** (net ৳ 4,549.75), exactly as hand-computed.
-  - Categories: sales 86,500 / rent 45,000 / inventory 32,750.25 / utilities 4,200. "Own-account transfers: out ৳ 10,000.00" is listed as not counted. "View source transactions" listed INV-101 (row 2) and INV-103 (row 4).
+  - **Before classifying:** Financial health for Oct 2026 showed the **Incomplete** banner: "5 posted transaction(s) … not classified (BDT 86,500.00 in, BDT 81,950.25 out)". The margin was "Not available". Two suggestions were pre-filled ("Paid INV-101", "Paid BILL-201"). The transfer to the wallet showed as an own-account transfer.
+  - **After choosing rent, utilities, and sales and saving:** receipts **BDT 86,500.00**, payments **BDT 81,950.25**, margin **5.26%** (net BDT 4,549.75), exactly as hand-computed.
+  - Categories: sales 86,500 / rent 45,000 / inventory 32,750.25 / utilities 4,200. "Own-account transfers: out BDT 10,000.00" is listed as not counted. "View source transactions" listed INV-101 (row 2) and INV-103 (row 4).
   - Staff saw the same figures with no Save button.
 - **Fixes made after reviewing the screenshots:**
   - The overdue-invoices card counted a disputed customer, while its amount excluded disputes. The counts now exclude disputed items, matching the buckets; the test was updated.
@@ -386,13 +387,71 @@
 - Trends compare calendar months only. The "change vs last month" percentage is a display calculation in the browser; the server figures are exact.
 - Months with posted movements but incomplete coverage are flagged, not blocked.
 
+## Prompt 08 — Cash Outlook
+
+### What was built
+
+| Area | What exists | Files |
+| --- | --- | --- |
+| Schema | Alembic revision `0009_forecast_snapshot` adds `forecast_snapshot`: business, calculation version, as-of business date, the **frozen inputs** (JSON), their **SHA-256**, the results, creator, and time. It is append-only (triggers reject UPDATE, DELETE, and TRUNCATE), so every figure shown can be traced to and recomputed from the exact inputs that produced it | [backend/migrations/versions/0009_forecast_snapshot.py](backend/migrations/versions/0009_forecast_snapshot.py) |
+| Frozen input snapshot | Built from accepted records only:<br>• per-account usable balance, freshness, verified date, and uncovered posted movements (Prompt 05);<br>• restricted funds ending inside the horizon;<br>• **outstanding** invoices and bills (Prompt 06: partly paid → only the remainder; paid or cancelled → excluded);<br>• the reserve and base currency;<br>• unmatched transfers.<br>Nothing outside this object affects the result | [backend/app/modules/outlook/service.py](backend/app/modules/outlook/service.py) |
+| Engine (calculation `outlook-v1`, pure) | **Daily closing balances for 30 days and weekly closes and minimums for 13 weeks**, computed **per account** and summed **per currency** (currencies are never combined). The reserve line applies to the base currency.<br>**Expected path:**<br>• opening includes fresh and stale balances (stale is flagged);<br>• receivables arrive on max(due, tomorrow);<br>• overdue receivables are assumed collected in 7 days and marked **uncertain**.<br>**Cautious path:**<br>• a stale positive balance is not relied on;<br>• receivables arrive **14 days late**;<br>• overdue receivables are left out.<br>**Both paths:**<br>• payables on max(due, tomorrow), disputed bills still counted;<br>• **disputed receivables are not counted**;<br>• accounts with no balance are excluded and reported;<br>• restriction releases are added back.<br>No future own-account transfer is modelled and only outstanding amounts are used, so nothing is counted twice. Every event names its source record (invoice/bill or restriction) and says when an account was **assumed**. Outputs: lowest point (13 weeks and 30 days) and **first reserve breach** (date, balance, gap) per path, and an **evidence list** (stale, missing, uncovered, disputed, assumed account, unmatched transfer, currency without an account) | [backend/app/modules/outlook/engine.py](backend/app/modules/outlook/engine.py) |
+| API | `POST …/cash-outlook/snapshots` (new role action `outlook.run`: owner, bookkeeper; audited).<br>`GET …/latest`, `GET …/snapshots`, `GET …/snapshots/{id}` (records.read). Each response reports whether today's inputs still match the snapshot (hash compare) and whether it is today's.<br>`GET …/snapshots/{id}/verify` recomputes the stored results from the stored inputs and checks the hash. A snapshot of another business → 404 | [backend/app/modules/outlook/router.py](backend/app/modules/outlook/router.py) |
+| UI: layout from `images/04-cash-outlook.png`, styling from `design.md` | **Top of the page, matching the mockup:**<br>• title and subtitle;<br>• a **warning banner** ("!" box, "Reserve shortfall projected for 21 October …", then "<path> balance · owner reserve · gap" in warning colour), or a success banner when there is no shortfall;<br>• a **13-week cash forecast** card with **Expected / Cautious legend pills** in the header and a **time-series line chart on a true date axis**: the as-of date, every day for the next 30 days, then each week's closing balance to week 13 (19 Jan). Points sit at their real dates, with date ticks every 2 weeks (every 4 on phones), point markers on week ends, an x-axis caption, and an orange **"Reserve floor"** line;<br>• an **Upcoming movements** card: date, bold party and number, and the amount right-aligned in green **+** / red **−**, each linking to its invoice or bill. **Uncertain** receipts are marked; disputed ones are listed as "Not counted".<br>**Chart styling (design.md):** 2px solid `#2347A5` for the expected path, dashed `#2876B8` for the cautious forecast, `#B76E00` (warning) for the reserve floor, no area fill. The axis carries the "BDT '000" currency identifier. Direct end labels, square vs round markers, a crosshair tooltip, and "View as table" are also there.<br>**Below the mockup layout** (required by the prompt, without changing the layout above): a **Daily balances · next 30 days** table with figures below the reserve in red; **By account** lowest expected and cautious per account; **Stale or missing evidence**; **How this was calculated** (time, user, as-of, `outlook-v1`, inputs SHA-256, rules) with **Verify figures** and **Recalculate**. A bar appears when records changed since the snapshot. Recalculate is for owner/bookkeeper only | [frontend/src/outlook/CashOutlookPage.tsx](frontend/src/outlook/CashOutlookPage.tsx), [frontend/src/charts/Charts.tsx](frontend/src/charts/Charts.tsx) |
+| Hand-checked fixture | Frozen inputs with one **on-time** (INV-1), one **late** (INV-2, overdue), and one **missing** (INV-3, disputed) receipt, two payables, a stale wallet, an account with no balance, and a restriction release. Every daily, weekly, lowest, and breach value is worked by hand | [fixtures/cash_outlook_case.json](fixtures/cash_outlook_case.json), [fixtures/cash_outlook_expected.md](fixtures/cash_outlook_expected.md) |
+
+### Evidence (run on 20 Oct 2026)
+
+- `alembic upgrade head` → `0008_classification -> 0009_forecast_snapshot`. `/api/health/ready` → 200 at `0009_forecast_snapshot`.
+- `pytest -q` → **285 passed**: 272 earlier plus 13 new in [backend/tests/test_cash_outlook.py](backend/tests/test_cash_outlook.py).
+  - **Opening:** expected **11,000,000**, cautious **10,000,000** (the stale wallet contributes 0 on the cautious path; the cash box with no balance is left out).
+  - **On time / late / missing:** INV-1 expected 25 Oct, cautious 8 Nov. INV-2 expected **27 Oct (uncertain)**, cautious **left out**. INV-3 (disputed) **left out of both**. The overdue rent is paid on 21 Oct with Bank assumed. The restriction release is on 15 Nov.
+  - **Exact daily values:** 21 Oct 9,500,000 / 8,500,000; 25 Oct 14,500,000 / 8,500,000; 27 Oct 10,500,000 / **1,500,000**; 8 Nov 10,500,000 / 6,500,000; 19 Nov 11,000,000 / 7,000,000. 30 daily points, starting 21 Oct.
+  - **Exact weekly values:** W1 (27 Oct) 10,500,000 / min 9,500,000 / 1,500,000 / 1,500,000 … W4 11,000,000 / 10,500,000 / 7,000,000 / 6,500,000 … W13 (19 Jan) 11,000,000 / 7,000,000.
+  - **Lowest and breach:** expected lowest 9,500,000 on 21 Oct with **no breach**. Cautious lowest 1,500,000 on 27 Oct, with **first breach 27 Oct, gap 6,500,000**.
+  - **Per-account paths and evidence** are exact. Currencies stay separate (a USD account is never added to BDT; a EUR invoice with no EUR account is reported). The engine is deterministic.
+  - **Snapshot through the API:** a fresh balance of 9,000,000, a bill −2,000,000 on day 3, an invoice +4,000,000 on day 5 (cautious day 19) → day 3 7,000,000, day 5 11,000,000 / 7,000,000, cautious breach on day 3 with gap 1,000,000. **Verify** → inputs hash matches and results reproduce.
+  - **Frozen:** after the invoice is paid, the stored snapshot's figures are unchanged, its status says inputs changed, and a new snapshot no longer counts the paid invoice. A partly paid bill counts only its 1,500,000 remainder.
+  - **Permissions and integrity:** staff → 403 on calculate but can read; a bookkeeper can calculate. Another business → 404 on latest, snapshot, and verify. SQL UPDATE/DELETE → "append-only". One audit event per snapshot. A business with no balances → no paths and three "missing balance" notes, never a guessed figure.
+- **Browser run (real UI, demo business, today 20 Oct 2026):**
+  - Chaya (staff) first saw "No outlook has been calculated yet. An owner or bookkeeper can calculate one", with no calculate button.
+  - Amina pressed **Calculate outlook**. The demo's bank (verified 15 Oct) and wallet (30 Sep) are stale, so:
+    - **expected path:** opens at BDT 2,02,050.25, lowest **BDT 1,59,050.25 on 5 Nov** (above the BDT 80,000 reserve);
+    - **cautious path:** opens at BDT 0, lowest **−BDT 1,81,000.00 on 31 Oct**;
+    - banner: "Shortfall on the cautious path from 21 Oct 2026 … does not rely on stale balances; the expected path stays above the reserve".
+  - All match a hand calculation (bank-only lowest BDT 1,16,549.75).
+  - Upcoming movements listed INV-104 (assumed account; cautious 5 Nov), BILL-210, INV-108 (**Uncertain**, overdue 15 days), PAY-OCT, INV-105, RENT-NOV, LOAN-0507, and INV-099 "Not counted" (disputed).
+  - Evidence listed the two stale balances, the missing cash box, the unmatched transfer, the disputed invoice, and the assumed account.
+  - **Verify figures** → "Verified: the stored inputs match their hash and recalculating them gives exactly the same figures". The chart tooltip at W2 showed Expected BDT 1,74,050.25 / Cautious −BDT 1,81,000.00 / Reserve BDT 80,000.00.
+  - Chaya then saw the outlook with no Recalculate button.
+- **Fixes made during the work:**
+  - **Engine bug:** a bill with no expected account was missing its "assumed account" evidence note.
+  - **Banner wording:** it now names both cautious reasons (late receipts and stale balances).
+  - **Chart:** ticks are now round (−200k…300k); the last x-labels no longer collide on mobile; the zero tick shows "0".
+  - Screenshots checked on desktop and at 390×844.
+- **UI redesign after user review (20 Oct 2026):** the first version had added a separate 30-day chart toggle, used colours that matched neither the mockup nor design.md, and let some amounts wrap.
+  - **Layout:** the page was rebuilt on the mockup's layout with design.md styling, and the 30-day view became a table below.
+  - **Colours:** the dataviz validator shows design.md's solid `#2347A5` vs dashed `#2876B8` are too close to tell apart by colour alone (normal-vision ΔE 13.0 < 15). As design.md intends, the two paths are therefore told apart by **line style** (solid vs dashed), **marker shape** (round vs square), direct end labels, and legend pills, not by colour. The reserve colour `#B76E00` passes all checks against `#2347A5`.
+  - **Time series (user request, 20 Oct 2026):** following design.md, the chart was changed from week labels ("Now, W2…W13") to a true time series. Dates are on the x-axis; the 30 daily points show the 27 Oct payroll dip, and weekly points continue to 19 Jan. The tooltip shows the full date ("Tue, 27 Oct 2026 · Expected BDT 1,72,050.25 · Cautious −BDT 1,36,000.00"). On phones the chart is taller and uses fewer date ticks so labels never overlap.
+  - **Layout audit:** an automated audit of **all 14 pages at 1440px and 390px** (page overflow, content spilling out of cards, clipped text, money or short labels wrapping) found and fixed amounts splitting across lines in the outlook banner and the Financial Health "not counted" list. Only ordinary sentences wrap now.
+- `audit.verify` on the demo database → `Audit chain OK: 558 events checked`. The demo now has one outlook snapshot.
+
+### Known gaps and risks
+
+- The assumptions are fixed for `outlook-v1` (14-day cautious delay, 7-day assumed collection of overdue invoices). They are not per-business settings yet; a change needs a new calculation version.
+- Daily figures are closing balances. Intraday order (money out before money in) is not modelled; Payment Review (Prompt 10) needs that.
+- No recurring costs (payroll, rent) are generated automatically. Only entered bills appear, so later weeks may look better than reality if bills are not yet entered.
+- No future own-account transfers are modelled, so a shortfall in one account is not covered by another account's cash.
+- The outlook does not create alerts (Prompt 09) or run payment checks (Prompt 10). It only shows the projected breach.
+
 ## Not built or verified yet
 
 | Area | Current status |
 | --- | --- |
 | Owner approval, action tiers T1–T3 | Not implemented (Prompt 15). Login, roles, and API business isolation (Prompt 01) and the audit trail (Prompt 02) are built |
 | Records foundation | Built: CSV/XLSX import (Prompt 04); balance reconstruction, reconciliation, restricted funds, and transfers (Prompt 05); receivables and payables with payments, reversals, and disputes (Prompt 06) |
-| Financial analysis, cash forecast, alerts, Payment Review, and Rescue Plan | Not implemented (Prompts 07–11, 13) |
+| Financial analysis and cash forecast | Built: Financial Health (Prompt 07) and Cash Outlook (Prompt 08) |
+| Alerts, Payment Review, evidence queue, and Rescue Plan | Not implemented (Prompts 09–11, 13) |
 | Financing catalogue, matching, readiness, conditional plan, and Funding Passport | Not implemented (Prompts 12, 14, 19, 20) |
 | Fraud rules and payment hold | Not implemented (Prompt 16) |
 | Sandbox action executor and operation logs | Not implemented (Prompt 17) |
@@ -412,4 +471,8 @@ An owner can create and edit a business profile (name, jurisdiction, base curren
 
 Bank and wallet statements can be imported safely from CSV/XLSX. Unsafe or ambiguous files are rejected, rows are staged with per-row errors, and possible duplicates must be reviewed. Selected rows are then posted exactly once to an append-only ledger. Staged rows are never treated as cash.
 
-No balances, reconciliation, analysis, forecast, approval workflow, or lender connectivity exists yet.
+Account balances can be reconciled against statement anchors with declared source coverage, restricted funds, and own-account transfer pairing. A zero residual is never treated as proof of completeness, and stale or missing balances are never added to spendable cash. Customer invoices and supplier bills keep their original terms, with exact outstanding amounts after payments and reversals, and concurrent over-allocation is refused.
+
+A cash-basis operating summary (not an audited P&L) ties every figure to its source records, and it was checked against the independent fixture. A 13-week Cash Outlook with expected and cautious paths is calculated from frozen, hash-verified input snapshots, and its exact path values were checked against a hand-worked fixture.
+
+No alerts, payment review, approval workflow, or lender connectivity exists yet.

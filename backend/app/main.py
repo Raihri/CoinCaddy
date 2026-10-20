@@ -12,6 +12,7 @@ from app.modules.cash.router import router as cash_router
 from app.modules.health.router import router as health_router
 from app.modules.health_summary.router import router as financial_health_router
 from app.modules.obligations.router import router as obligations_router
+from app.modules.outlook.router import router as outlook_router
 from app.modules.records.files import MAX_FILE_BYTES
 from app.modules.records.router import router as records_router
 from app.modules.identity.router import auth_router, business_router
@@ -36,6 +37,7 @@ def create_app() -> FastAPI:
     app.include_router(cash_router)
     app.include_router(obligations_router)
     app.include_router(financial_health_router)
+    app.include_router(outlook_router)
     # Refuse oversized uploads before multipart parsing (file limit plus room for form overhead).
     app.add_middleware(BodySizeLimit, path_pattern=r"/api/businesses/[^/]+/imports", max_bytes=MAX_FILE_BYTES + 64 * 1024)
     return app

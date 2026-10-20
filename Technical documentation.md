@@ -150,8 +150,6 @@ A deterministic planner maps a question to at most one read-only tool: Financial
 - Audit events include actor, role, action, outcome, target, and redacted details. A serialized append computes a SHA-256 chain. The verifier detects changes to existing chain contents; this is tamper-evident, not immutable against a database administrator who can rewrite the whole chain.
 - No configured Postgres row-level security policy was found. Tenant isolation currently depends on authenticated business context and business-scoped SQL queries; this requires continued cross-business authorization testing.
 
-See [security_self_assessment.md](security_self_assessment.md) for the role matrix, action tiers, evidence, and known risks.
-
 ## 6. Verification evidence
 
 Verified locally on 20 October 2026:

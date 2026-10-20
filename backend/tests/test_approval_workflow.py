@@ -36,6 +36,14 @@ def _setup(biz=None):
     biz.inv = make("receivable", "INV-108", "Eastline Stores", -12, 4_500_000, "sales")
     biz.inv_future = make("receivable", "INV-200", "Later Ltd", 10, 1_000_000, "sales")
     biz.bill = make("payable", "DS-441", "Delta Supplies", 3, 6_000_000, "inventory_suppliers")
+    party_id = biz.owner.get(f"{biz.base}/obligations/{biz.inv}").json()["party"]["id"]
+    contact = biz.owner.post(f"{biz.base}/guardian/customers/{party_id}/contacts",
+                             json={"channel": "email", "address": "accounts@eastline.example"})
+    assert contact.status_code == 201, contact.text
+    biz.contact_id = contact.json()["id"]
+    verified = biz.owner.post(f"{biz.base}/guardian/contacts/{biz.contact_id}/review", json={
+        "decision": "verify", "method": "called_known_contact", "reference": "Known customer phone on file"})
+    assert verified.status_code == 200, verified.text
     # One open reminder per invoice is allowed, so tests that need several use fresh overdue invoices.
     n = iter(range(300, 400))
     biz.new_invoice = lambda: make("receivable", f"INV-{next(n)}", "Eastline Stores", -12, 4_500_000, "sales")
@@ -45,6 +53,7 @@ def _setup(biz=None):
 
 def _reminder(biz, client=None, **kw):
     body = {"kind": "invoice_reminder", "obligation_id": biz.inv, "channel": "email",
+            "contact_id": biz.contact_id,
             "message": "Dear Eastline Stores, invoice INV-108 is overdue. Please arrange payment."} | kw
     return (client or biz.owner).post(biz.url, json=body)
 

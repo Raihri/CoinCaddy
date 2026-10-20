@@ -326,7 +326,8 @@ def test_lost_answer_is_not_processed_twice_by_the_sandbox(sandbox):
     p = _released_reminder(biz)
     mk = mock_key(biz.id, p["id"], p["payload_sha256"])
     body = {"reference": "INV-108", "customer": "Eastline Stores", "channel": "email", "amount_minor": 4_500_000, "currency": "BDT",
-            "due_date": p["payload"]["due_date"], "message": MESSAGE}
+                "due_date": p["payload"]["due_date"], "message": MESSAGE,
+                "recipient": p["payload"]["contact"]["address_masked"]}
     earlier = TestClient(mock_app).post("/sandbox/reminders", json=body, headers={"Idempotency-Key": mk}).json()
     r = _run(biz, biz.owner, p)
     assert r.status_code == 201 and r.json()["reference"] == earlier["reference"] and r.json()["result"]["replayed"] is True

@@ -14,6 +14,7 @@ from app.modules.cash.router import router as cash_router
 from app.modules.evidence_queue.router import router as evidence_queue_router
 from app.modules.executor.router import router as executor_router
 from app.modules.fraud.router import router as fraud_router
+from app.modules.guardian.router import router as guardian_router
 from app.modules.funding.router import router as funding_router
 from app.modules.health.router import router as health_router
 from app.modules.health_summary.router import router as financial_health_router
@@ -53,6 +54,7 @@ def create_app() -> FastAPI:
     app.include_router(payment_review_router)
     app.include_router(evidence_queue_router)
     app.include_router(funding_router)
+    app.include_router(guardian_router)
     app.include_router(rescue_router)
     app.include_router(deferral_permission_router)
     app.include_router(readiness_router)

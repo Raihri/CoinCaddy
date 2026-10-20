@@ -44,6 +44,7 @@ class ReminderRequest(_Strict):
     currency: StrictStr = Field(pattern=r"^[A-Z]{3}$")
     due_date: StrictStr = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
     message: StrictStr = Field(min_length=10, max_length=500)
+    recipient: StrictStr | None = Field(default=None, max_length=120)   # the verified contact, masked; the full address never leaves the app
 
 
 class ApplicationRequest(_Strict):
@@ -111,7 +112,8 @@ IdemKey = Header(alias="Idempotency-Key", pattern=KEY_PATTERN)
 def send_reminder(body: ReminderRequest, key: str = IdemKey) -> JSONResponse:
     return _once("reminders", key, body, lambda: (200, {
         "reference": _ref("RMD", key), "status": "queued", "delivered": False,
-        "note": f"Sandbox only: no {'email' if body.channel == 'email' else 'SMS'} was sent to {body.customer}."}))
+        "note": f"Sandbox only: no {'email' if body.channel == 'email' else 'SMS'} was sent to {body.customer}"
+                + (f" ({body.recipient})." if body.recipient else ".")}))
 
 
 @router.post("/applications")

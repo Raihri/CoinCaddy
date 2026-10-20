@@ -25,7 +25,8 @@
 | 15 | Approved Action Workflow | **Done — verified locally** |
 | 16 | Transaction Fraud Monitor | **Done — verified locally** |
 | 17 | Sandbox Action Executor | **Done — verified locally** |
-| 18–22 | Receivables Guardian through Region Pack | Not started |
+| 18 | Receivables Guardian | **Done — verified locally** |
+| 19–22 | Conditional Funding Plan through Region Pack | Not started |
 
 ## Prompt 00 — runnable foundation
 
@@ -891,8 +892,32 @@
 - The HTTP call to the mock is made while the proposal row is locked inside the database transaction (5-second timeout). This is fine for a local sandbox; a real integration would need an outbox.
 - After a "failed" (no answer), only a retry with the same key can finish the action. If the key is lost (another browser tab), the proposal stays without a final outcome; a new proposal is needed.
 - A rejected outcome is final for that proposal; a corrected action needs a new proposal.
-- Packet sharing has an adapter and a mock endpoint, but no proposal type yet (Funding Passport, Prompt 20). Reminders go to the customer by name only; contact verification is Prompt 18.
+- Packet sharing has an adapter and a mock endpoint, but no proposal type yet (Funding Passport, Prompt 20). Prompt 18 now binds reminders to a current, owner-verified customer contact; the sandbox receives only its masked address and sends nothing real.
 - A payment requires a recorded destination, and it goes to the supplier's current destination at run time (a change after approval is caught by the Fraud Monitor hold, as tested).
+
+## Prompt 18 — Receivables Guardian
+
+### What was built
+
+| Area | What exists | Files |
+| --- | --- | --- |
+| Aging and suggestions | The Guardian reads the existing obligations calculator's outstanding amount, overdue days, and dispute state. It groups open customer invoices into current, 1–30, 31–60, 61–90, and 91+ day buckets, with disputed amounts separate. It ranks customers with eligible overdue invoices by oldest overdue bucket and then outstanding value. A disputed or not-yet-due invoice is not suggested for a reminder | [backend/app/modules/guardian/engine.py](backend/app/modules/guardian/engine.py), [backend/app/modules/guardian/router.py](backend/app/modules/guardian/router.py) |
+| Verified contacts | Owner/bookkeeper may record a customer email or SMS contact. Only a masked address and business-scoped keyed digest are kept; the full address is never stored. An owner records a verification method and reference, or rejects the contact with a reason. A newer contact for the same customer and channel supersedes the older one and must be verified independently before use. A rejected or unverified contact cannot receive a reminder proposal | same router, [backend/migrations/versions/0018_receivables_guardian.py](backend/migrations/versions/0018_receivables_guardian.py) |
+| Internal drafts | For an outstanding, undisputed, overdue invoice with a current verified contact, an owner/bookkeeper can create a reminder from the invoice's customer, number, outstanding amount, due date, and overdue days. Draft text is internal and saved with a facts hash. A dispute, open reminder proposal, or sandbox reminder within the seven-day cooldown blocks a new draft. The original invoice and its amount are unchanged | same |
+| Approval and sandbox | A draft can be submitted to the existing T2 approval workflow. The approval payload is bound to the current verified contact and rechecked at proposal and release time. Only after owner approval and release can an owner run the existing sandbox reminder adapter. The mock receives the masked contact and returns a sandbox-only result; no real message is sent. The Guardian shows the draft, approval link, state, and sandbox outcome. Sending does not settle the invoice | [backend/app/modules/approvals/router.py](backend/app/modules/approvals/router.py), [backend/app/modules/executor/adapters.py](backend/app/modules/executor/adapters.py), [mock_services/sandbox.py](mock_services/sandbox.py) |
+| Access, audit and UI | Server actions: `guardian.read` and `guardian.draft` for owner/bookkeeper; `contact.write` for owner/bookkeeper; `contact.verify` for owner. Staff cannot read this feature. Contact, draft, and approval-link tables are insert-only. Audit events carry masked contact and metadata, not the full address or draft message. **Receivables Guardian** has an aging table, contact priority list, per-invoice blockers, contact verification, internal drafts, and approval/outcome links. Invoice pages link directly to the Guardian. The generic approval form directs invoice reminders through Guardian | [backend/app/modules/identity/policy.py](backend/app/modules/identity/policy.py), [frontend/src/guardian/ReceivablesGuardianPage.tsx](frontend/src/guardian/ReceivablesGuardianPage.tsx), [frontend/src/shell/navigation.ts](frontend/src/shell/navigation.ts) |
+
+### Evidence (run on 20 Oct 2026)
+
+- Development and isolated test databases migrated to `0018_receivables_guardian`; `/api/health/ready` reports `ok` with that schema and the mock service reachable.
+- Complete backend suite: **421 passed**. Focused Prompt 18 tests cover aging and priority order, disputed and future invoices, staff denial, rejected and unverified contact refusal, a current verified contact, an internal draft with no proposal, unapproved sandbox refusal, owner approval and release, successful sandbox-only outcome, unchanged invoice outstanding amount, redacted audit data, and business-scoped contact digests. Existing approval and sandbox tests were updated to use verified contacts and continue to pass.
+- `npm run build` passes. In the local browser, the owner can open the new sidebar page; the empty Funding Match Test business shows no invoices, and Northstar shows aging totals plus a disputed invoice that states why reminders are blocked. The invoice's detail panel has contact verification and internal-draft sections. No browser sandbox send was performed; the API integration test covers that path.
+
+### Known gaps and risks
+
+- Verification is a statement recorded by an owner; the app cannot check a customer's email or phone against an external source. The full address is intentionally discarded, so the sandbox can show only a masked recipient. A live messaging integration would need a separately protected address vault and consent controls.
+- The customer may not pay after a reminder. Only a payment recorded in the obligations module reduces outstanding balance.
+- The seven-day cooldown covers successful sandbox reminders; the mock does not send a real message. Legacy API clients can still create a reminder proposal directly if they supply a current verified contact, while the app UI uses Guardian drafts for reminder creation.
 
 ## Not built or verified yet
 
@@ -910,6 +935,7 @@
 | Conditional plan and Funding Passport | Not implemented (Prompts 19, 20) |
 | Fraud rules and payment hold | Built (Prompt 16): versioned rules, suspected-activity flags, holds on proposed sandbox payments, reviews, payee destination register |
 | Sandbox action executor and operation logs | Built (Prompt 17): four separate mock adapters, rechecks before each run, idempotent retries, redacted append-only logs. No real integrations |
+| Receivables Guardian | Built (Prompt 18): aging, prioritized contacts, verified contact gate, internal drafts, approval and sandbox outcome history |
 | AI assistant and tool boundaries | Not implemented (Prompt 21) |
 | Deployment, presentation deck, demo video, security self-assessment | Not created |
 | Real customer interviews, pilots, financial outcomes | Not supplied or verified |

@@ -32,6 +32,7 @@ export function ObligationsPage() {
         <div>
           <p className="muted small"><Link className="link" to="/records">Records</Link> / Invoices &amp; bills</p>
           <h1 className="page-title">Invoices &amp; bills</h1>
+          <p className="page-sub"><Link className="link" to="/receivables-guardian">Open Receivables Guardian</Link> to review overdue customers and internal reminder drafts.</p>
         </div>
         {canWrite && <button type="button" className="btn btn-primary" onClick={() => setShowForm((v) => !v)}>{showForm ? "Close form" : "New invoice or bill"}</button>}
       </div>

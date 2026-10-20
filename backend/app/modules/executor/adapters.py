@@ -77,7 +77,7 @@ class ReminderSend(Adapter):
     def build(self, payload: dict, extra: dict) -> dict:
         return {"reference": payload["document_number"], "customer": payload["customer"], "channel": payload["channel"],
                 "amount_minor": payload["outstanding_minor"], "currency": payload["currency"], "due_date": payload["due_date"],
-                "message": payload["message"]}
+                "message": payload["message"], "recipient": payload["contact"]["address_masked"]}
 
     def redacted(self, request: dict) -> dict:
         # The message is customer-facing text: the log keeps its hash and length, not the words.

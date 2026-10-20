@@ -223,6 +223,19 @@ function describe(e: AuditEvent): string {
     case "executor.run:denied":
     case "executor.read:denied":
       return "Tried to use the sandbox executor without permission";
+    case "guardian.contact_add:success":
+      return `Recorded a ${d.channel} contact for ${d.customer}: ${d.address} (verification required)`;
+    case "guardian.contact_review:success":
+      return `${d.decision === "verify" ? "Verified" : "Rejected"} a ${d.channel} contact: ${d.address}`;
+    case "guardian.draft_create:success":
+      return `Created an internal reminder draft for ${d.document_number} (${d.channel}, stage ${d.stage})`;
+    case "guardian.draft_propose:success":
+      return `Sent a reminder draft for ${d.document_number} to the approval inbox`;
+    case "guardian.read:denied":
+    case "guardian.draft:denied":
+    case "contact.write:denied":
+    case "contact.verify:denied":
+      return "Tried to use Receivables Guardian without permission";
     case "account.relabel:not_found":
       return "Tried to rename an account that is not in this business";
     default:

@@ -74,6 +74,11 @@ ROLE_MATRIX: dict[str, frozenset[str]] = {
     # proposal once through its mock adapter (owner only, like release). Nothing real is sent, submitted, paid, or shared.
     "executor.read": frozenset({"owner", "bookkeeper"}),
     "executor.run": frozenset({"owner"}),
+    # Receivables Guardian: see aging, suggestions, contacts and drafts / draft a reminder / record a customer contact / verify or reject one.
+    "guardian.read": frozenset({"owner", "bookkeeper"}),
+    "guardian.draft": frozenset({"owner", "bookkeeper"}),
+    "contact.write": frozenset({"owner", "bookkeeper"}),
+    "contact.verify": frozenset({"owner"}),
     # Read the business's audit history.
     "audit.read": frozenset({"owner", "bookkeeper"}),
 }

@@ -68,6 +68,7 @@ class _ProposalBase(_Strict):
 class ReminderIn(_ProposalBase):
     kind: Literal["invoice_reminder"]
     obligation_id: UUID
+    contact_id: UUID   # the customer's verified contact on this channel (Receivables Guardian)
     channel: Literal["email", "sms"]
     message: StrictStr
     validate_message = field_validator("message")(_text(500, min_len=10, no_links=True))
@@ -170,9 +171,28 @@ def _reminder(db: Session, b: UUID, today: date, p: dict, self_id=None, release:
     if _others(db, b, "invoice_reminder", "obligation_id", o["id"], self_id, released_only=release):
         raise SourceError(f"A reminder for {o['document_number']} is already released." if release else
                           f"A reminder proposal for {o['document_number']} is already open; decide or withdraw it first.")
+    # A reminder goes only to a contact that was verified, is the customer's current one on this channel, and is still verified now.
+    c = db.execute(text(
+        """SELECT c.id, c.channel, c.address_masked, c.party_id, r.decision, r.method, r.created_at AS verified_at,
+                  NOT EXISTS (SELECT 1 FROM customer_contact n WHERE n.business_id = c.business_id AND n.party_id = c.party_id AND n.channel = c.channel
+                              AND (n.created_at, n.id) > (c.created_at, c.id)) AS is_current
+           FROM customer_contact c LEFT JOIN customer_contact_review r ON r.contact_id = c.id
+           WHERE c.business_id = :b AND c.id = :i"""), {"b": b, "i": p["contact_id"]}).mappings().first()
+    if c is None or str(c["party_id"]) != o["party"]["id"]:
+        raise SourceError(f"That contact was not found for {o['party']['name']}.")
+    if c["channel"] != p["channel"]:
+        raise SourceError(f"That contact is for {c['channel']}, not {p['channel']}.")
+    if c["decision"] == "rejected":
+        raise SourceError("That contact was rejected. A reminder cannot be sent to it.")
+    if c["decision"] != "verified":
+        raise SourceError("That contact is not verified yet. A reminder goes only to a verified contact.")
+    if not c["is_current"]:
+        raise SourceError("A newer contact was recorded for this customer and channel; verify it first. A reminder goes only to the current verified contact.")
     return {"obligation_id": o["id"], "document_number": o["document_number"], "customer": o["party"]["name"],
             "outstanding_minor": o["outstanding_minor"], "currency": o["currency"], "due_date": o["due_date"],
-            "channel": p["channel"], "message": p["message"], "delivery": "sandbox"}
+            "channel": p["channel"], "message": p["message"], "contact_id": str(c["id"]),
+            "contact": {"channel": c["channel"], "address_masked": c["address_masked"], "verified_by_method": c["method"], "verified_at": iso(c["verified_at"])},
+            "delivery": "sandbox"}
 
 
 def _payment(db: Session, b: UUID, today: date, p: dict, self_id=None, release: bool = False) -> dict:
@@ -238,7 +258,7 @@ def _application(db: Session, b: UUID, today: date, p: dict, self_id=None, relea
 
 BUILDERS = {"invoice_reminder": _reminder, "supplier_payment": _payment, "financing_application": _application}
 # Facts the release recheck compares with today's records (what an approver relied on).
-FACTS = {"invoice_reminder": ("obligation_id", "customer", "outstanding_minor", "currency"),
+FACTS = {"invoice_reminder": ("obligation_id", "customer", "outstanding_minor", "currency", "contact_id"),
          "supplier_payment": ("obligation_id", "supplier", "amount_minor", "currency", "from_account_id"),
          "financing_application": ("readiness_check_id", "product_id", "amount_minor", "currency")}
 

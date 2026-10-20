@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { api, fmtDate } from "../api";
 import type { Account } from "../auth/session";
 import { parseMajorToMinor } from "../money";
@@ -15,7 +16,6 @@ type ReadinessRow = { id: string; product_name: string; state: string; created_a
 type ReviewRow = { id: string; decision: string; as_of: string; request: { account_id: string; amount_minor: number; payee: string } };
 
 const KIND_OPTIONS: { value: Kind; label: string; tier: string }[] = [
-  { value: "invoice_reminder", label: "Send overdue invoice reminder", tier: "T2" },
   { value: "supplier_payment", label: "Pay supplier (sandbox)", tier: "T3" },
   { value: "financing_application", label: "Submit financing application (sandbox lender)", tier: "T3" },
 ];
@@ -25,7 +25,7 @@ export function ProposeForm({ base, accounts, money, exponent, canReadReviews, c
   base: string; accounts: Account[]; money: (minor: number, currency: string) => string; exponent: (currency: string) => number;
   canReadReviews: boolean; canReadReadiness: boolean; onCreated: (p: Proposal) => void; onCancel: () => void;
 }) {
-  const [kind, setKind] = useState<Kind>("invoice_reminder");
+  const [kind, setKind] = useState<Kind>("supplier_payment");
   const [invoices, setInvoices] = useState<Obligation[]>([]);
   const [bills, setBills] = useState<Obligation[]>([]);
   const [checks, setChecks] = useState<ReadinessRow[]>([]);
@@ -107,6 +107,7 @@ export function ProposeForm({ base, accounts, money, exponent, canReadReviews, c
         {tier === "T3" ? "T3: an owner who did not propose it must approve, re-enter their password, and record how it was verified."
           : "T2: needs an explicit owner approval."} Nothing is sent or paid; approval only allows a later sandbox executor to act.
       </p>
+      <p className="muted small">For an invoice reminder, <Link className="link" to="/receivables-guardian">create a verified-contact draft in Receivables Guardian</Link> first.</p>
       <form className="stack-form" onSubmit={submit} noValidate>
         <Field label="Action">
           <select value={kind} onChange={(e) => { setKind(e.target.value as Kind); setF((x) => ({ ...x, obligation: "", amount: "", review: "", check: "" })); setErrors({}); }}>

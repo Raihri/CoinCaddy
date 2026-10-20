@@ -8,6 +8,7 @@ import { OverviewPage } from "./overview/OverviewPage";
 import { PaymentReviewPage } from "./review/PaymentReviewPage";
 import { FundingMatchesPage } from "./funding/FundingMatchesPage";
 import { FraudMonitorPage } from "./fraud/FraudMonitorPage";
+import { ReceivablesGuardianPage } from "./guardian/ReceivablesGuardianPage";
 import { ImportDetailPage } from "./records/ImportDetailPage";
 import { RecordsPage } from "./records/RecordsPage";
 import { AccountPage } from "./cash/AccountPage";
@@ -40,6 +41,7 @@ function App() {
         <Route path="/payment-review" element={<PaymentReviewPage />} />
         <Route path="/funding-matches" element={<FundingMatchesPage />} />
         <Route path="/fraud-monitor" element={<FraudMonitorPage />} />
+        <Route path="/receivables-guardian" element={<ReceivablesGuardianPage />} />
         <Route path="/records" element={<RecordsPage />} />
         <Route path="/financial-health" element={<FinancialHealthPage />} />
         <Route path="/cash-outlook" element={<CashOutlookPage />} />

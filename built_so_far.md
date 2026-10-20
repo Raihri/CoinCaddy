@@ -19,7 +19,8 @@
 | 09 | Smart Alerts | **Done — verified locally** |
 | 10 | Payment Review | **Done — verified locally** |
 | 11 | Decision-Impact Evidence Queue | **Done — verified locally** |
-| 12–22 | Financing Matching through Region Pack | Not started |
+| 12 | Funding Matches | **Done — verified locally** |
+| 13–22 | Cash Gap Rescue Plan through Region Pack | Not started |
 
 ## Prompt 00 — runnable foundation
 
@@ -559,6 +560,47 @@
 - The 1% materiality threshold and the tier order are fixed for `evidence-queue-v1`.
 - No assignment, due dates, or completion tracking for tasks. Rescue options (Prompt 13) are not part of this.
 
+## Prompt 12 — Funding Matches
+
+### What was built
+
+| Area | What exists | Files |
+| --- | --- | --- |
+| Catalogue | A **versioned, illustrative** catalogue (`catalogue-2026.10`, terms updated 1 Oct 2026) of six sample products: working capital line, invoice advance, term loan, wallet micro-loan, secured bank loan, and a Kenyan trade line. Each has jurisdictions, currencies, amount bounds, minimum months trading and monthly revenue, purposes, security, required documents, typical funding days, pricing, repayment rule, and a source label with an update date. It states it is written for this prototype and is not from any real lender | [backend/app/modules/funding/catalogue.json](backend/app/modules/funding/catalogue.json) |
+| Hard filters (all reasons kept) | Jurisdiction, currency, amount, business age, revenue, purpose, security, documents, funding time. **Revenue** is the average monthly classified operating receipts over the last 90 days from the ledger. **Receivable security** is checked against your records (advance up to 80% of outstanding, undisputed invoices). **Business age, guarantor, collateral, and documents are owner-declared and labelled unverified.** A product that fails any filter is excluded with every reason and is never costed or ranked | [backend/app/modules/funding/engine.py](backend/app/modules/funding/engine.py) |
+| Exact terms | Integer minor units, half-up rounding, any remainder on the last payment: processing fee (deducted from proceeds), flat-rate term-loan installments on calendar months, interest on a bullet line, and the invoice advance's fee per started 30 days. Each result shows net proceeds, total repayment, total cost, cost as a % of the amount, disbursement date, and every repayment date | same |
+| Effect on the cash forecast | The product's proceeds and repayments are inserted into the **existing, unmodified Cash Outlook engine** on the owner's chosen account (proceeds on the funding date, each repayment on its date). Lowest cash and first reserve breach are shown for the expected and cautious paths and compared with the baseline, which equals the Cash Outlook's own figures. Only repayments inside the 13-week forecast can change these figures | same |
+| Ranking | Cautious path stays above the reserve first, then higher lowest cash on the cautious path, then lower total cost, then faster funding, then ID. The reasons are shown on each product, plus badges (**Best repayment fit**, **Fastest funding**, **Lowest quoted cost**) | same |
+| Labels | Every result carries "Illustrative · potential match, not an approval"; the response states `lender_approval: false` and `data_shared: false`, and the page shows the catalogue version, update date, and per-product terms source. No lender is contacted and no business data leaves the app | [backend/app/modules/funding/router.py](backend/app/modules/funding/router.py) |
+| Saved runs | Alembic revision `0012_funding_matches`: `funding_match_run` stores the request, frozen inputs and SHA-256, the exact catalogue contents and version, and the results; append-only. `POST …/funding-matches` (new `funding.run`: owner, bookkeeper; audited), `GET …`, `GET …/{id}`, `GET …/{id}/verify` (recomputes from the stored inputs and catalogue), `GET …/catalogue` (`funding.read`: owner, bookkeeper; staff → 403). There is no apply, submit, share, or approve route | [backend/migrations/versions/0012_funding_matches.py](backend/migrations/versions/0012_funding_matches.py) |
+| UI | **Funding Matches** is now available (layout from `images/06-funding-matches.png`: funding-need card with the "potential match" pill, Compare options with badges, total repayment, lowest cash, and a details drawer with fees and the repayment schedule). Below, a **Not eligible** list with every reason and terms source. The **Readiness** and **Funding Passport** cards of the mockup are not built (later prompts) | [frontend/src/funding/FundingMatchesPage.tsx](frontend/src/funding/FundingMatchesPage.tsx) |
+
+### Evidence (run on 20 Oct 2026)
+
+- `alembic upgrade head` → `0011_payment_review -> 0012_funding_matches`; `/api/health/ready` expects `0012_funding_matches`.
+- `pytest -q` → **338 passed**: 322 earlier plus 16 new in [backend/tests/test_funding_matches.py](backend/tests/test_funding_matches.py). Hand-worked case: bank 10,000,000, reserve 8,000,000, a 5,000,000 bill on 27 Oct (so the baseline already falls to 5,000,000 on 27 Oct, gap 3,000,000); need 4,000,000 by 27 Oct:
+  - **Working capital line:** fee 20,000, net 3,980,000, interest 118,356 (18% × 60/365), repaid 4,118,356 on 22 Dec, cost 138,356. Cautious lowest **4,861,644 on 22 Dec**, first breach that day, gap 3,138,356.
+  - **Term loan:** 12% flat × 6 months = 240,000; installments 706,666 ×5 and 706,670 (the 4 minor-unit remainder on the last); dates 27th of each month; cost 6%. Cautious lowest **7,586,668 on 27 Dec**, gap 413,332.
+  - **Invoice advance:** 2 started 30-day periods at 1.5% = 120,000, repaid 4,120,000 on 5 Dec. Lowest **4,880,000 on 5 Dec**.
+  - **Two products with different repayment effects:** the lump repayment drops the line to 4,861,644 while the small monthly installments keep the term loan at 7,586,668.
+  - **Ranking and badges:** term loan, invoice advance, working capital line; best repayment fit = term loan, fastest funding and lowest cost = invoice advance. With 12,500,000 cash and a 2,000,000 need the term loan alone stays above the reserve (8,793,334) and ranks first; the others fall to 7,440,000, 7,430,822, and 7,380,822.
+  - **Excluded products:** the micro-loan (amount above its 3,000,000 maximum), the secured bank loan with **six reasons** (amount, business age 18 < 24, revenue, collateral not declared, tax certificate missing, 21 days to fund against 7), and the Kenyan line (not offered in BD, does not lend in BDT, and more). Excluded products have no terms or forecast and are never ranked. Each hard filter was also tested alone (purpose, age, documents, funding time, guarantor), plus the revenue and receivable-cover filters against records.
+  - **Other checks:** calendar month-end clamping (31 Jan + 1 month = 28 Feb), refusals (unknown account, date out of range, account with no balance), deterministic output, inputs untouched, and the catalogue labelled illustrative with dates.
+  - **API, end to end:** receipts imported and classified, a balance anchor, a bill, and an invoice → three eligible products; revenue comes from the classified records; the saved run equals the response, and Verify reproduces it. Staff → 403; another business → 404 on list, read, verify, and catalogue; unknown fields, floats, bad purposes, and another business's account are refused; the success and the staff refusal are audited; the router has only GET and POST and no apply/share route; UPDATE on a saved run is rejected as append-only.
+- **Browser run:**
+  - The demo business (no classified receipts in the last 90 days) honestly returned **no eligible product**, with the reasons, including "records show 0 over the last 90 days".
+  - On a throwaway test business with 30,000,000 of classified receipts, a BDT 40,000 need by 27 Oct returned invoice advance (3 badges), working capital line, and term loan, with the funding dates, totals, lowest cash, and the labels. This matches the hand calculation (term loan 10,000,000 + 4,000,000 − 5,000,000 − 706,666 = 8,293,334 on its first installment date). The 1024px page had no horizontal overflow.
+- `npm run build` passes.
+
+### Known gaps and risks
+
+- The catalogue is invented sample data. Real products, regional rules, and Prompt 22's region pack are not covered, and the jurisdictions listed are not a legal claim.
+- Business age, guarantor, collateral, and documents are what the owner declares; nothing checks them. Revenue depends on transactions being classified as operating receipts.
+- Interest is flat-rate for term loans and simple for lines. There is no APR/effective-rate figure, no late fees, and no early-repayment terms.
+- Repayments beyond the 13-week forecast are listed in the schedule but do not change the lowest-cash figure.
+- Funding time assumes the application is made today. No application is made and no lender is contacted; there is no readiness view, Funding Passport, Conditional Funding Plan, or Rescue Plan in this prompt.
+- The match does not check whether the product's money covers the Cash Outlook gap, only how it changes the lowest cash. The smallest useful amount (Prompt 13) is not computed.
+
 ## Not built or verified yet
 
 | Area | Current status |
@@ -570,7 +612,8 @@
 | Payment Review | Built (Prompt 10): four scenarios, saved reports, never initiates payment |
 | Evidence queue | Built (Prompt 11): read-only, ranked, per saved review |
 | Rescue Plan | Not implemented (Prompt 13) |
-| Financing catalogue, matching, readiness, conditional plan, and Funding Passport | Not implemented (Prompts 12, 14, 19, 20) |
+| Financing catalogue and matching | Built (Prompt 12): illustrative catalogue, filters, forecast effect, ranking |
+| Financing readiness, conditional plan, and Funding Passport | Not implemented (Prompts 14, 19, 20) |
 | Fraud rules and payment hold | Not implemented (Prompt 16) |
 | Sandbox action executor and operation logs | Not implemented (Prompt 17) |
 | AI assistant and tool boundaries | Not implemented (Prompt 21) |
@@ -596,5 +639,7 @@ A cash-basis operating summary (not an audited P&L) ties every figure to its sou
 Deterministic alerts (reserve breach, overdue invoice, unusual outflow, repayment pressure) are shown on the Overview with their date, amount, cause, severity, and supporting record IDs, and repeated runs do not duplicate them. They run only on request; nothing is sent externally.
 
 A proposed payment can be checked in four scenarios on one frozen snapshot, with exactly one decision state (within reserve under stated assumptions, reserve shortfall, or more information needed); known breaches stay visible and material unknowns block a positive result. Reports are saved and never initiate a payment. For each saved review, a ranked queue lists the missing, stale, or disputed records that could change it, with bounded best/worst effects only where the record has an amount; it never resolves evidence or changes the decision.
+
+Illustrative financing products can be filtered by documented eligibility, costed exactly, and tested on the cash forecast, with exclusion reasons and the source and date of every term; they are labelled potential matches, never approvals.
 
 No approval workflow or lender connectivity exists yet.

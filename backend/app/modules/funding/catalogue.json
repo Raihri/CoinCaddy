@@ -1,0 +1,68 @@
+{
+  "version": "catalogue-2026.10",
+  "label": "Illustrative financing catalogue (sample terms for a prototype)",
+  "updated": "2026-10-01",
+  "source": "Written for this prototype. Not taken from any real lender, not a quote, and not verified with any lender.",
+  "products": [
+    {
+      "id": "wc-line", "name": "Working capital line", "kind": "credit_line", "provider": "Illustrative lender A",
+      "jurisdictions": ["BD"], "currencies": ["BDT"], "min_amount_minor": 1000000, "max_amount_minor": 50000000,
+      "min_months_trading": 6, "min_monthly_revenue_minor": 5000000,
+      "purposes": ["working_capital", "inventory", "invoice_gap"], "security": "none",
+      "documents": ["bank_statements", "id"], "funding_days": 3,
+      "pricing": {"processing_fee_bps": 50, "interest_annual_bps": 1800, "tenor_days": 60},
+      "repayment": "Single repayment of principal plus interest at the end of the term",
+      "source": {"label": "Illustrative sample terms", "updated": "2026-10-01"}
+    },
+    {
+      "id": "invoice-advance", "name": "Invoice advance", "kind": "invoice_advance", "provider": "Illustrative lender B",
+      "jurisdictions": ["BD"], "currencies": ["BDT"], "min_amount_minor": 500000, "max_amount_minor": 30000000,
+      "min_months_trading": 3, "min_monthly_revenue_minor": 3000000,
+      "purposes": ["invoice_gap", "working_capital"], "security": "receivables", "advance_rate_bps": 8000,
+      "documents": ["invoices", "id"], "funding_days": 1,
+      "pricing": {"processing_fee_bps": 0, "fee_per_30_days_bps": 150, "tenor_days": 45},
+      "repayment": "Single repayment of the advance plus a fee for each 30 days (part periods count in full)",
+      "source": {"label": "Illustrative sample terms", "updated": "2026-10-01"}
+    },
+    {
+      "id": "term-loan", "name": "Term loan", "kind": "term_loan", "provider": "Illustrative lender C",
+      "jurisdictions": ["BD"], "currencies": ["BDT"], "min_amount_minor": 2000000, "max_amount_minor": 100000000,
+      "min_months_trading": 12, "min_monthly_revenue_minor": 8000000,
+      "purposes": ["working_capital", "equipment", "inventory"], "security": "guarantor",
+      "documents": ["bank_statements", "id", "trade_licence"], "funding_days": 7,
+      "pricing": {"processing_fee_bps": 0, "interest_annual_bps": 1200, "installments": 6},
+      "repayment": "Equal monthly installments of principal plus flat-rate interest",
+      "source": {"label": "Illustrative sample terms", "updated": "2026-10-01"}
+    },
+    {
+      "id": "wallet-microloan", "name": "Wallet micro-loan", "kind": "credit_line", "provider": "Illustrative lender D",
+      "jurisdictions": ["BD"], "currencies": ["BDT"], "min_amount_minor": 100000, "max_amount_minor": 3000000,
+      "min_months_trading": 3, "min_monthly_revenue_minor": 1000000,
+      "purposes": ["working_capital", "inventory"], "security": "none",
+      "documents": ["wallet_history", "id"], "funding_days": 1,
+      "pricing": {"processing_fee_bps": 300, "interest_annual_bps": 3600, "tenor_days": 30},
+      "repayment": "Single repayment of principal plus interest after 30 days",
+      "source": {"label": "Illustrative sample terms", "updated": "2026-10-01"}
+    },
+    {
+      "id": "secured-bank-loan", "name": "Secured bank loan", "kind": "term_loan", "provider": "Illustrative lender E",
+      "jurisdictions": ["BD"], "currencies": ["BDT"], "min_amount_minor": 20000000, "max_amount_minor": 500000000,
+      "min_months_trading": 24, "min_monthly_revenue_minor": 20000000,
+      "purposes": ["equipment", "working_capital"], "security": "collateral",
+      "documents": ["bank_statements", "id", "trade_licence", "tax_certificate"], "funding_days": 21,
+      "pricing": {"processing_fee_bps": 100, "interest_annual_bps": 1000, "installments": 12},
+      "repayment": "Equal monthly installments of principal plus flat-rate interest",
+      "source": {"label": "Illustrative sample terms", "updated": "2026-10-01"}
+    },
+    {
+      "id": "ke-trade-line", "name": "Trade line (Kenya)", "kind": "credit_line", "provider": "Illustrative lender F",
+      "jurisdictions": ["KE"], "currencies": ["KES"], "min_amount_minor": 5000000, "max_amount_minor": 200000000,
+      "min_months_trading": 6, "min_monthly_revenue_minor": 10000000,
+      "purposes": ["working_capital", "inventory"], "security": "none",
+      "documents": ["bank_statements", "id"], "funding_days": 5,
+      "pricing": {"processing_fee_bps": 100, "interest_annual_bps": 2000, "tenor_days": 90},
+      "repayment": "Single repayment of principal plus interest at the end of the term",
+      "source": {"label": "Illustrative sample terms", "updated": "2026-10-01"}
+    }
+  ]
+}

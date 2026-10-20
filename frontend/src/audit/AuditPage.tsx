@@ -130,6 +130,10 @@ function describe(e: AuditEvent): string {
       return `Saved a payment review: ${String(d.decision).replace(/_/g, " ")}${d.linked_payable ? " (linked to a bill)" : ""}`;
     case "paymentreview.run:denied":
       return "Tried to run a payment review without permission";
+    case "funding.run:success":
+      return `Compared financing options: ${d.eligible} eligible, ${d.excluded} excluded (illustrative, nothing applied for)`;
+    case "funding.run:denied":
+      return "Tried to compare financing options without permission";
     case "alerts.run:success":
       return `Checked alerts: ${d.created} new, ${d.updated} changed, ${d.resolved} cleared`;
     case "alerts.run:denied":

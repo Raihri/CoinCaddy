@@ -6,6 +6,7 @@ import { FinancialHealthPage } from "./health/FinancialHealthPage";
 import { CashOutlookPage } from "./outlook/CashOutlookPage";
 import { OverviewPage } from "./overview/OverviewPage";
 import { PaymentReviewPage } from "./review/PaymentReviewPage";
+import { FundingMatchesPage } from "./funding/FundingMatchesPage";
 import { ImportDetailPage } from "./records/ImportDetailPage";
 import { RecordsPage } from "./records/RecordsPage";
 import { AccountPage } from "./cash/AccountPage";
@@ -36,6 +37,7 @@ function App() {
         <Route path="/approvals-audit" element={<AuditPage />} />
         <Route path="/overview" element={<OverviewPage />} />
         <Route path="/payment-review" element={<PaymentReviewPage />} />
+        <Route path="/funding-matches" element={<FundingMatchesPage />} />
         <Route path="/records" element={<RecordsPage />} />
         <Route path="/financial-health" element={<FinancialHealthPage />} />
         <Route path="/cash-outlook" element={<CashOutlookPage />} />

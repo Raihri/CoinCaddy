@@ -8,7 +8,6 @@
 
 - **Live app:** [https://coincaddy.vercel.app](https://coincaddy.vercel.app)
 - **GitHub:** [Raihri/CoinCaddy](https://github.com/Raihri/CoinCaddy)
-- **Previous live address:** [sme-copilot-ebon.vercel.app](https://sme-copilot-ebon.vercel.app) (kept as an alternate domain)
 
 Choose a synthetic demo profile to enter the sandbox. Amina Rahman is the owner profile for Northstar Trading; Bilal Hossain is the bookkeeper; Chaya Das is staff. Role permissions apply to each profile.
 

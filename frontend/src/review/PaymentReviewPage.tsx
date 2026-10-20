@@ -82,6 +82,7 @@ export function PaymentReviewPage() {
       {canRead && canRun && profile && <ReviewForm base={base} payables={payables} onSaved={saved} />}
       {canRead && loaded && !report && <section className="card" style={{ marginTop: 16 }}><p className="muted">No payment review has been saved yet. Enter a proposed payment above.</p></section>}
       {report && <ReportView report={report} money={money} />}
+      {report && <EvidenceQueue base={base} reviewId={report.id} currency={report.results.currency} money={money} />}
       {rows.length > 1 && (
         <section className="card" style={{ marginTop: 16 }} aria-labelledby="saved-title">
           <h2 id="saved-title" className="card-title">Saved reviews</h2>
@@ -271,5 +272,71 @@ function ReportView({ report, money }: { report: Report; money: (m: number, c: s
         <p className="muted small">{r.authorization}</p>
       </section>
     </>
+  );
+}
+
+type Effect = { bounded: boolean; note?: string; swing_minor: number | null; flips_decision: boolean; best_decision: Decision | null; worst_decision: Decision | null;
+                current: { minimum_by_path: Record<string, number | null> }; best: { minimum_by_path: Record<string, number | null> } | null;
+                worst: { minimum_by_path: Record<string, number | null> } | null };
+type Task = { id: string; rank: number; tier: string; title: string; why: string; verify: string; amount_minor: number | null; status: "open" | "record_changed";
+              status_note: string | null; blocks_positive_result: boolean; source: { kind: string; id: string; label: string }; effect: Effect };
+type Queue = { decision_on_record: Decision; materiality_threshold_minor: number; records_changed_since_review: boolean | null; tasks: Task[]; note: string };
+const TIER: Record<string, { label: string; cls: string }> = {
+  blocking: { label: "Blocks a positive result", cls: "badge-danger" }, decision_changing: { label: "Could change the decision", cls: "badge-warning" },
+  material: { label: "Material", cls: "badge-info" }, unbounded_upside: { label: "Left out; could only add cash", cls: "badge-muted" },
+  immaterial: { label: "Immaterial", cls: "badge-muted" },
+};
+const PATHS: Record<string, string> = { on_time: "All on time", receipts_delayed: "Receipts delayed", largest_missed: "Largest receipt missed", adverse: "Owner-defined adverse" };
+
+function EvidenceQueue({ base, reviewId, currency, money }: { base: string; reviewId: string; currency: string; money: (m: number, c: string) => string }) {
+  const [q, setQ] = useState<Queue | null>(null);
+  useEffect(() => {
+    setQ(null);
+    api<Queue>(`${base}/payment-reviews/${reviewId}/evidence-queue`).then((r) => { if (r.ok) setQ(r.data); });
+  }, [base, reviewId]);
+  if (!q) return null;
+  const link = (s: Task["source"]) => s.kind === "account" ? `/records/accounts/${s.id}` : s.kind === "obligation" ? `/records/obligations/${s.id}`
+    : s.kind === "transfer" ? "/records/transfers" : s.kind === "business_settings" ? "/business-settings" : null;
+  const changes = (e: Effect, side: "best" | "worst") => {
+    const v = e[side];
+    if (!v) return null;
+    return Object.entries(v.minimum_by_path).filter(([k, m]) => m !== null && m !== e.current.minimum_by_path[k]).map(([k, m]) => `${PATHS[k]}: ${money(m as number, currency)}`);
+  };
+  return (
+    <section className="card" style={{ marginTop: 16 }} aria-labelledby="queue-title">
+      <h2 id="queue-title" className="card-title">What to verify first</h2>
+      <p className="muted small">Ranked by how much each record could change this review. Nothing here is resolved automatically, and the result above does not change until records are corrected and a new review is run.</p>
+      {q.tasks.length === 0 && <p className="muted">No missing, stale, or disputed record affects this review.</p>}
+      <ol className="queue-list">
+        {q.tasks.map((t) => {
+          const to = link(t.source);
+          const best = t.effect.bounded ? changes(t.effect, "best") : null;
+          const worst = t.effect.bounded ? changes(t.effect, "worst") : null;
+          return (
+            <li key={t.id} className={`queue-item ${t.status === "record_changed" ? "is-changed" : ""}`}>
+              <div className="alert-head">
+                <span className="alert-title"><span className="queue-rank">{t.rank}</span> {t.title}</span>
+                <span className="badges">
+                  <span className={`badge ${TIER[t.tier].cls}`}>{TIER[t.tier].label}</span>
+                  {t.status === "record_changed" && <span className="badge badge-success">Record changed since this review</span>}
+                </span>
+              </div>
+              <p className="alert-cause"><strong>Why it matters:</strong> {t.why}</p>
+              <p className="alert-cause"><strong>To verify:</strong> {t.verify}</p>
+              {t.status_note && <p className="badge badge-info">{t.status_note}</p>}
+              <div className="queue-effect">
+                {!t.effect.bounded && <span className="muted small">{t.effect.note ?? "The size of the effect cannot be bounded."}</span>}
+                {t.effect.bounded && (t.effect.swing_minor ?? 0) === 0 && <span className="muted small">No effect on the lowest cash of any scenario.</span>}
+                {best && best.length > 0 && <span className="small">If verified favourably, lowest cash would be: {best.join("; ")}{t.effect.best_decision && t.effect.flips_decision ? `. The review would show ${t.effect.best_decision.replace(/_/g, " ")}.` : "."}</span>}
+                {worst && worst.length > 0 && <span className="small">If not as assumed: {worst.join("; ")}.</span>}
+                {t.amount_minor !== null && <span className="muted small">Amount on record {money(t.amount_minor, currency)}</span>}
+              </div>
+              {to && <div className="alert-records"><Link className="chip" to={to}>View supporting record · {t.source.label}</Link></div>}
+            </li>
+          );
+        })}
+      </ol>
+      <p className="muted small" style={{ marginTop: 12 }}>Materiality threshold {money(q.materiality_threshold_minor, currency)} (1% of the reserve). {q.note}</p>
+    </section>
   );
 }

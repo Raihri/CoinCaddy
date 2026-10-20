@@ -409,3 +409,11 @@ a.chip { color: var(--primary); }
 .path-detail { border-top: 1px solid var(--border); padding: 10px 0; }
 .path-detail summary { cursor: pointer; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .path-detail ul { margin: 8px 0; padding-left: 20px; color: var(--text-secondary); }
+
+/* Evidence queue */
+.queue-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 12px; }
+.queue-item { border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; }
+.queue-item.is-changed { background: var(--success-soft); border-color: var(--success-soft); }
+.queue-item .alert-cause { margin: 6px 0; overflow-wrap: anywhere; }
+.queue-rank { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 13px; margin-right: 6px; }
+.queue-effect { display: grid; gap: 4px; margin: 6px 0 8px; font-variant-numeric: tabular-nums; }

@@ -18,7 +18,8 @@
 | 08 | Cash Outlook | **Done — verified locally** |
 | 09 | Smart Alerts | **Done — verified locally** |
 | 10 | Payment Review | **Done — verified locally** |
-| 11–22 | Evidence Queue through Region Pack | Not started |
+| 11 | Decision-Impact Evidence Queue | **Done — verified locally** |
+| 12–22 | Financing Matching through Region Pack | Not started |
 
 ## Prompt 00 — runnable foundation
 
@@ -523,6 +524,41 @@
 - No preview without saving: every run creates a saved report. Saved reports cannot be deleted.
 - The Rescue options from the mockup and the evidence-impact queue (Prompts 11 and 13) are not built. Nothing here approves or executes a payment (Prompts 15 and 17).
 
+## Prompt 11 — Decision-Impact Evidence Queue
+
+### What was built
+
+| Area | What exists | Files |
+| --- | --- | --- |
+| Scope | A read-only queue for **one saved Payment Review**. It is computed on request from that review's own frozen inputs and request; **nothing is stored, no migration, and the Payment Review calculator was not changed** (the queue calls it unmodified) | [backend/app/modules/evidence_queue/engine.py](backend/app/modules/evidence_queue/engine.py) |
+| What becomes a task | Every record that could change this review, in the payment's currency:<br>• **blockers** the review already reports: funding balance missing or stale, other stale balances, a disputed linked bill, an unmatched own-account transfer, no reserve defined;<br>• a **disputed receivable** (not counted on any path), a **disputed bill** (still counted), an **overdue receivable** (assumed collected on the on-time, largest-missed, and adverse paths);<br>• an **account with no balance** that is left out. | same |
+| Effect, bounded only where defensible | For an invoice or bill the effect is measured by **re-running the Payment Review calculator on a copy of the frozen inputs with only that record changed**: best case, worst case, minimum cash on each of the four paths, the swing, and whether the decision would change. A missing or stale balance and an unmatched transfer carry no defensible amount, so they are shown as **unbounded** with no figure. A hypothetical result is labelled as what the review *would* show; it is never the result | same |
+| Ranking | 1 **blocking** (funding balance, then disputed linked bill, other stale balances, transfers, no reserve) → 2 **decision-changing** → 3 **material** (moves lowest cash by at least 1% of the reserve, or 1% of the payment if there is none) → 4 **unbounded upside** (a missing balance that is left out) → 5 **immaterial**. Inside a tier: larger swing, then larger amount, then ID, so the order is deterministic. Each task shows rank, why it matters, what to verify, its source record link, tier, and effect | same |
+| Never auto-resolves | The queue has **no write route** (GET only). The saved decision is returned unchanged as `decision_on_record`. Each task is also compared with today's records: if its record changed, the task shows "Record changed since this review" and asks for a **new** Payment Review; the old review and its decision stay as saved. The decision changes only when a person with permission corrects the record (for example an owner or bookkeeper entering a balance anchor) and a new review is run | [backend/app/modules/evidence_queue/router.py](backend/app/modules/evidence_queue/router.py) |
+| API | `GET /api/businesses/{id}/payment-reviews/{review_id}/evidence-queue` (`paymentreview.read`: owner, bookkeeper; staff → 403; another business → 404) | same |
+| UI | A **What to verify first** card under the review on the Payment Review screen: numbered tasks with a tier badge, why it matters, what to verify, best/worst effect, the amount on record, and a "View supporting record" link. Changed records are highlighted | [frontend/src/review/PaymentReviewPage.tsx](frontend/src/review/PaymentReviewPage.tsx) |
+
+### Evidence (run on 20 Oct 2026)
+
+- `pytest -q` → **322 passed**: 314 earlier plus 8 new in [backend/tests/test_evidence_queue.py](backend/tests/test_evidence_queue.py):
+  - **Missing balance above an immaterial receipt:** funding account with no balance and a 50,000 overdue invoice (reserve 8,000,000, threshold 80,000) → order `balance:bank` (blocking, unbounded, rank 1), the unbounded cash box, then the invoice (**immaterial**, swing 0).
+  - **Exact effects (hand-checked):** a disputed 1,000,000 bill is the only reason the delayed path reaches 7,000,000 on 28 Oct. If it were removed, every path would be exactly 8,000,000 and the decision would move from shortfall to within reserve, so it is the only **decision-changing** task (swing 1,000,000). The overdue 3,000,000 invoice is **material** (without it the largest-missed path drops to 7,000,000), and a disputed invoice that arrives after every low point has swing 0 and is **immaterial**.
+  - **Materiality order:** three overdue invoices (3,000,000, 100,000, 50,000) with a payment after they arrive swing the on-time lowest cash by exactly their amounts: material, material, **immaterial** (50,000 < 80,000), with the unbounded balance task above the immaterial one.
+  - **Blocker order:** funding balance, disputed linked bill, other stale balance, unmatched transfer. A transfer is unbounded because its amount is not in the frozen inputs.
+  - **No invented result:** the inputs are untouched, the saved decision is unchanged, the queue is deterministic, and no single-record best case reports "within reserve" while a blocker remains.
+  - **Changed records flagged, not resolved:** a balance that became fresh shows `record_changed` with the "run a new review" note while `decision_on_record` stays `more_information_needed`.
+  - **API, end to end:** a payment from an account with no balance → **More information needed**, queue rank 1 = that account's balance. Reading the queue twice returns the same result and creates no review or audit event. Staff get 403 on the queue and on entering a balance. The owner then enters the balance anchor: the old review still says **More information needed** and its task shows "Record changed"; only a **new** review returns **Within reserve**, and its queue has no blocking task.
+  - **Access:** another business → 404 (queue and review); POST → 405; the only queue route is GET.
+- **Browser run (demo business):** the saved BDT 20,000 review showed "What to verify first" with two unmatched-transfer blockers (rank 1–2, no bound), then the cash box and the mobile wallet (left out, could only add cash), the threshold BDT 800.00, and the note that nothing is resolved automatically. `npm run build` passes.
+
+### Known gaps and risks
+
+- Each task changes one record at a time. Two records that matter only together are not combined, and the best case for one blocker does not clear the others (the decision stays "More information needed" until all are verified).
+- Balances, stale balances, and transfers cannot be bounded, so the queue ranks them by whether they block a positive result, not by size.
+- The queue reflects the review's frozen inputs. It compares with today's records only for "record changed"; it does not predict the new answer.
+- The 1% materiality threshold and the tier order are fixed for `evidence-queue-v1`.
+- No assignment, due dates, or completion tracking for tasks. Rescue options (Prompt 13) are not part of this.
+
 ## Not built or verified yet
 
 | Area | Current status |
@@ -532,7 +568,8 @@
 | Financial analysis and cash forecast | Built: Financial Health (Prompt 07) and Cash Outlook (Prompt 08) |
 | Alerts | Built: Smart Alerts (Prompt 09), manual run only |
 | Payment Review | Built (Prompt 10): four scenarios, saved reports, never initiates payment |
-| Evidence queue and Rescue Plan | Not implemented (Prompts 11, 13) |
+| Evidence queue | Built (Prompt 11): read-only, ranked, per saved review |
+| Rescue Plan | Not implemented (Prompt 13) |
 | Financing catalogue, matching, readiness, conditional plan, and Funding Passport | Not implemented (Prompts 12, 14, 19, 20) |
 | Fraud rules and payment hold | Not implemented (Prompt 16) |
 | Sandbox action executor and operation logs | Not implemented (Prompt 17) |
@@ -558,6 +595,6 @@ A cash-basis operating summary (not an audited P&L) ties every figure to its sou
 
 Deterministic alerts (reserve breach, overdue invoice, unusual outflow, repayment pressure) are shown on the Overview with their date, amount, cause, severity, and supporting record IDs, and repeated runs do not duplicate them. They run only on request; nothing is sent externally.
 
-A proposed payment can be checked in four scenarios on one frozen snapshot, with exactly one decision state (within reserve under stated assumptions, reserve shortfall, or more information needed); known breaches stay visible and material unknowns block a positive result. Reports are saved and never initiate a payment.
+A proposed payment can be checked in four scenarios on one frozen snapshot, with exactly one decision state (within reserve under stated assumptions, reserve shortfall, or more information needed); known breaches stay visible and material unknowns block a positive result. Reports are saved and never initiate a payment. For each saved review, a ranked queue lists the missing, stale, or disputed records that could change it, with bounded best/worst effects only where the record has an amount; it never resolves evidence or changes the decision.
 
 No approval workflow or lender connectivity exists yet.

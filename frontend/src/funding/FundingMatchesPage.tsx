@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { api, fmtDate } from "../api";
 import { useSession } from "../auth/session";
 import { formatMoney, parseMajorToMinor } from "../money";
 import type { FieldErrors } from "../settings/apiErrors";
 import { exponentOf, Field } from "../settings/fields";
+import { DocumentsCard } from "./DocumentsCard";
+import { ReadinessCard } from "./ReadinessCard";
 
-// Layout follows images/06-funding-matches.png (funding need, Compare options); styling follows design.md.
-// The Readiness and Funding Passport cards of the mockup belong to later prompts and are not built here.
+// Layout follows images/06-funding-matches.png (funding need, Compare options with Readiness beside it); styling follows design.md.
+// The Funding Passport card of the mockup belongs to a later prompt and is not built here.
 type Lowest = { date: string; amount_minor: number };
 type Breach = { date: string; balance_minor: number; gap_minor: number } | null;
 type PathView = { lowest: Lowest; first_breach: Breach };
@@ -35,6 +37,10 @@ export function FundingMatchesPage() {
   const base = active ? `/api/businesses/${active.business_id}/funding-matches` : "";
   const canRead = active?.allowed_actions.includes("funding.read") ?? false;
   const canRun = active?.allowed_actions.includes("funding.run") ?? false;
+  const readiness = { read: active?.allowed_actions.includes("readiness.read") ?? false, run: active?.allowed_actions.includes("readiness.run") ?? false };
+  const docs = { read: active?.allowed_actions.includes("documents.read") ?? false, write: active?.allowed_actions.includes("documents.write") ?? false };
+  const [docsVersion, setDocsVersion] = useState(0);
+  const bizBase = active ? `/api/businesses/${active.business_id}` : "";
   const [run, setRun] = useState<Run | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
   const [cat, setCat] = useState<Catalogue | null>(null);
@@ -64,7 +70,10 @@ export function FundingMatchesPage() {
       {!canRead && <section className="card"><p className="muted">Only owners and bookkeepers can use Funding Matches.</p></section>}
       {canRead && canRun && cat && <NeedForm base={base} cat={cat} onSaved={(r) => { setRun(r); load(); }} />}
       {canRead && loaded && !run && <section className="card" style={{ marginTop: 16 }}><p className="muted">No funding comparison has been saved yet. Describe the funding need above.</p></section>}
-      {run && <RunView run={run} money={money} />}
+      {run && <RunView run={run} money={money} readiness={readiness.read
+        ? <ReadinessCard base={bizBase} runId={run.id} eligible={run.results.eligible} excluded={run.results.excluded} canRun={readiness.run} docsVersion={docsVersion} />
+        : null} />}
+      {docs.read && <div style={{ marginTop: 16 }}><DocumentsCard base={bizBase} canWrite={docs.write} onChanged={() => setDocsVersion((v) => v + 1)} /></div>}
       {rows.length > 1 && (
         <section className="card" style={{ marginTop: 16 }}>
           <h2 className="card-title">Saved comparisons</h2>
@@ -132,7 +141,7 @@ function NeedForm({ base, cat, onSaved }: { base: string; cat: Catalogue; onSave
   );
 }
 
-function RunView({ run, money }: { run: Run; money: (m: number, c: string) => string }) {
+function RunView({ run, money, readiness }: { run: Run; money: (m: number, c: string) => string; readiness: ReactNode }) {
   const r = run.results;
   const cur = r.currency;
   const base = r.baseline.cautious;
@@ -151,8 +160,9 @@ function RunView({ run, money }: { run: Run; money: (m: number, c: string) => st
       </section>
       <p className="muted small" style={{ marginTop: 8 }}>{r.notice} Catalogue {run.catalogue_version}, terms updated {fmtDate(r.catalogue_updated)}. {r.catalogue_source}</p>
 
-      <section className="card" style={{ marginTop: 16 }} aria-labelledby="cmp-title">
-        <h2 id="cmp-title" className="card-title">Compare options</h2>
+      <div className={readiness ? "funding-grid" : ""} style={{ marginTop: 16 }}>
+      <section className="card" aria-labelledby="cmp-title">
+        <h2 id="cmp-title" className="section-title">Compare options</h2>
         {r.eligible.length === 0 && <p className="muted">No product in this catalogue passed every eligibility filter. See the reasons below.</p>}
         {r.eligible.length > 0 && <p className="muted small">{r.ranking_rule}</p>}
         <ol className="queue-list">
@@ -190,6 +200,8 @@ function RunView({ run, money }: { run: Run; money: (m: number, c: string) => st
           })}
         </ol>
       </section>
+      {readiness}
+      </div>
 
       <section className="card" style={{ marginTop: 16 }} aria-labelledby="ex-title">
         <h2 id="ex-title" className="card-title">Not eligible</h2>

@@ -21,7 +21,8 @@
 | 11 | Decision-Impact Evidence Queue | **Done — verified locally** |
 | 12 | Funding Matches | **Done — verified locally** |
 | 13 | Cash Gap Rescue Plan | **Done — verified locally** |
-| 14–22 | Financing Readiness through Region Pack | Not started |
+| 14 | Financing Readiness | **Done — verified locally** |
+| 15–22 | Approved Action Workflow through Region Pack | Not started |
 
 ## Prompt 00 — runnable foundation
 
@@ -650,6 +651,50 @@
 - One option per kind is simulated (the largest eligible invoice, the largest permitted bill, the top eligible product) unless the owner picks another. The combination is always "everything available".
 - No smallest-funding-amount calculation, no approval, and no execution of any option (Prompts 15 and 17).
 
+## Prompt 14 — Financing Readiness
+
+### What was built
+
+| Area | What exists | Files |
+| --- | --- | --- |
+| Checklist engine (`readiness-v1`) | For **one product of a saved Funding Match** (eligible or excluded), every condition the product publishes is reported as exactly one of **present**, **missing**, or **uncertain**. Each condition shows the requirement, what was found, the **exact source** (record dates, account coverage, invoice numbers, a register entry), a **verification step**, and, when not present, a concrete **improvement**. Overall state: `ready` only when every condition is present; `not_ready` when any is missing; otherwise `needs_verification`. A declaration in the funding form is never enough for "present" | [backend/app/modules/readiness/engine.py](backend/app/modules/readiness/engine.py) |
+| Conditions and their sources | Jurisdiction, currency, amount, purpose, time to funds (with an "apply by" date), and:<br>• **Revenue**: average monthly classified operating receipts over 90 days (the Funding Matches figure). It is present only if it meets the minimum **and** no account with movements has a statement coverage gap **and** no inflow is unclassified; otherwise uncertain (or missing when complete records fall short, with the monthly shortfall).<br>• **Bank statements / wallet history**: declared statement coverage for every bank (wallet) account over the 90-day window up to two days ago. Gaps mean missing, with the dates to import; figures that do not reconcile mean uncertain.<br>• **Invoices / invoice security**: outstanding, undisputed invoices in Receivables (with the advance cap).<br>• **Business age**: the earliest posted transaction or a registered trade licence issue date; declared months alone are uncertain.<br>• **Guarantor / collateral**: a registered guarantor letter or collateral valuation; a declaration alone is uncertain.<br>• **ID, trade licence, tax certificate**: a register entry. Expired, or expiring before the funds are needed, means missing; expiring within 30 days after means uncertain; a trade licence or tax certificate without an expiry date means uncertain | same |
+| Not used | No approval probability, score, or likelihood is calculated. The match rank is not an input or an output. The engine accepts only six named inputs (the date, jurisdiction, saved run, product, records, documents) and refuses any other, so no personal trait can be passed in | same |
+| Document register | Alembic revision `0014_financing_readiness`: `business_document` (kind, where it is kept, issue and expiry dates). It never stores the document or its number: a reference with **8 or more digits in a row** (after spaces and hyphens are removed) is refused by the API **and** by a database CHECK. Insert-only; a wrong entry is voided with a reason, never edited or deleted. Only the **owner** records or voids (`documents.write`); owner and bookkeeper can read (`documents.read`); staff → 403 | [backend/migrations/versions/0014_financing_readiness.py](backend/migrations/versions/0014_financing_readiness.py), [backend/app/modules/readiness/router.py](backend/app/modules/readiness/router.py) |
+| Saved checks | `readiness_check` stores the frozen inputs with their SHA-256 and the results; append-only. A **database CHECK** ties the state to the counts, so a row cannot be `ready` while any condition is missing or uncertain. `POST …/financing-readiness` (new `readiness.run`: owner, bookkeeper; audited), `GET …?run_id=`, `GET …/{id}`, `GET …/{id}/verify`. GET and POST only; there is no apply, submit, share, or send route, and a check changes no Funding Match | same |
+| UI | On **Funding Matches**, a **Readiness** card sits beside Compare options as in `images/06-funding-matches.png`: a product picker, the state badge with counts, one row per condition with a mark (+ present, ? uncertain, ! missing) **and** the status word (colour is never the only signal), expandable requirement, source, and verification, then "Improve before applying". A **Documents for financing** card below records and voids register entries, and the Readiness card says when the register changed after the shown check. BDT amounts in the text use the app format (taka sign, 1,00,000 grouping). The Funding Passport card of the mockup is not built (Prompt 20) | [frontend/src/funding/ReadinessCard.tsx](frontend/src/funding/ReadinessCard.tsx), [frontend/src/funding/DocumentsCard.tsx](frontend/src/funding/DocumentsCard.tsx), [frontend/src/funding/FundingMatchesPage.tsx](frontend/src/funding/FundingMatchesPage.tsx) |
+
+### Evidence (run on 20 Oct 2026)
+
+- `alembic upgrade head` → `0013_rescue_plan -> 0014_financing_readiness`; `/api/health/ready` expects `0014_financing_readiness`.
+- `pytest -q` → **374 passed**: 358 earlier plus 16 new in [backend/tests/test_financing_readiness.py](backend/tests/test_financing_readiness.py):
+  - **All present → ready:** working capital line with full statement coverage, BDT 1,00,000.00 a month of classified receipts, 9 months of records, and an ID entry. All 10 conditions are present, each with a source and a verification step, and there are no improvements.
+  - **Missing documents cannot be ready:** no ID entry → missing (not ready). ID only declared in the funding form → uncertain (needs verification). ID expired 30 Sep → missing. No statement coverage → bank statements missing, with the exact window 2026-07-23 to 2026-10-18 to import.
+  - **Uncertain revenue cannot be ready:** 2 unclassified inflows (BDT 5,000.00) → uncertain although the minimum is met. A coverage gap from 1 to 10 Aug → uncertain, and the statements are missing. Below the minimum, but the unclassified inflows could close it → uncertain. Complete records BDT 10,000.00 a month below the minimum → missing, with that shortfall in the improvement.
+  - **Business age:** 18 months declared but 3 months of records → uncertain; a trade licence issued 1 Mar 2024 → present (31 months); 4 months declared → missing.
+  - **Security:** a guarantor only declared → uncertain; a registered guarantor letter → present. Invoice advance with BDT 40,000.00 of invoices (80% = BDT 32,000.00) → missing, "reduce the amount to BDT 32,000.00 or less".
+  - **Wallet and reconciliation:** no wallet account → wallet history missing; a wallet with a residual → uncertain.
+  - **Expiry rules:** expires before the need → missing; within 30 days after → uncertain; no expiry → uncertain; valid → present.
+  - **Product conditions and time:** the Kenyan line → jurisdiction, currency, and amount missing. A 21-day product needed in 5 days → missing, "at least 21 days ahead". A date that has passed → missing. Improvements list missing before uncertain.
+  - **No probability or score:** the output contains no probability, likelihood, score, rank, chance, or "approved". It is deterministic, the inputs are untouched, and an extra input such as `owner_gender` is refused. Money text matches the app format (tested).
+  - **API, end to end:** wc-line is *eligible* in Funding Matches, yet the first check is **not ready** (statements missing; ID, revenue, and age uncertain). After declaring statement coverage and recording the ID → needs verification (only business age left). After recording a trade licence with its issue date → **ready**. Voiding the licence → needs verification again, while the older saved check stays ready. Verify reproduces a check, the saved Funding Match is unchanged, and an excluded product can also be checked.
+  - **Register validation:** "NID 1990 1234 5678" and "12-34-56-78" refused; formulas, blanks, unknown kinds, unknown fields, an expiry before the issue date, and a future issue date refused. Voiding twice → 409. UPDATE/DELETE blocked, and the database CHECK refuses a reference with an ID number.
+  - **Access and audit:** staff → 403 on checks and documents; a bookkeeper can run checks but not record documents (403); another business → 404 on runs, checks, verify, documents, and void. Success and denied events are audited (the document reference is not copied into the audit details). Only GET and POST routes exist, with no apply/submit/share/approve/send. UPDATE on a check is rejected as append-only, and the database refuses a `ready` row with a missing or an uncertain count.
+- **Browser run (headless Edge, throwaway business in the test database, owner; the demo data was not touched):**
+  - The Readiness card beside Compare options first showed "Not ready · 6 present · 1 missing · 3 uncertain".
+  - Typing "NID 1990 1234 5678" in the Documents card was refused with the message.
+  - Recording "Passport copy, office drive" showed the "register changed" notice; Check again → "7 present · 1 missing · 2 uncertain" with Owner ID present.
+  - No horizontal overflow at 1440, 1024, or 390 px; at 390 px the cards stack.
+- The API on port 8000 was running older code (it reported a schema mismatch), so I restarted it with the README command. `npm run build` passes.
+
+### Known gaps and risks
+
+- The document register is what the owner records. A register entry counts as "present" for that document, but nothing checks the original; the source text says the lender will.
+- Revenue completeness treats accounts with no records in the 90-day window as unused, and says so in the source. A real but unrecorded account would not be noticed.
+- Statement coverage is what was declared in Records; the check does not open the imported files.
+- The 90-day window, the 2-day statement lag, the 30-day "expiring soon" margin, and the annual-renewal rule for trade licences and tax certificates are fixed for `readiness-v1`.
+- The conditions are those of the illustrative catalogue only. There is no real lender's checklist, no fairness review of outcomes on real users, no application, and no Funding Passport (Prompt 20).
+
 ## Not built or verified yet
 
 | Area | Current status |
@@ -662,7 +707,8 @@
 | Evidence queue | Built (Prompt 11): read-only, ranked, per saved review |
 | Rescue Plan | Built (Prompt 13): proposals only, no ledger mutation |
 | Financing catalogue and matching | Built (Prompt 12): illustrative catalogue, filters, forecast effect, ranking |
-| Financing readiness, conditional plan, and Funding Passport | Not implemented (Prompts 14, 19, 20) |
+| Financing readiness | Built (Prompt 14): per-condition checklist with sources, document register, no probability or score |
+| Conditional plan and Funding Passport | Not implemented (Prompts 19, 20) |
 | Fraud rules and payment hold | Not implemented (Prompt 16) |
 | Sandbox action executor and operation logs | Not implemented (Prompt 17) |
 | AI assistant and tool boundaries | Not implemented (Prompt 21) |
@@ -692,5 +738,7 @@ A proposed payment can be checked in four scenarios on one frozen snapshot, with
 Illustrative financing products can be filtered by documented eligibility, costed exactly, and tested on the cash forecast, with exclusion reasons and the source and date of every term; they are labelled potential matches, never approvals.
 
 For a payment that would breach the reserve, a Rescue Plan compares collecting an overdue invoice, moving a discretionary bill (only with a documented supplier permission), an illustrative financing match, and a combination on the same frozen forecast, and recommends one only when it closes the gap; it makes proposals only.
+
+For a selected illustrative product, Financing Readiness shows each published condition and document as present, missing, or uncertain, with its source or verification step and concrete improvements. A check can only be "ready" when nothing is missing or uncertain (enforced in code and in the database). It calculates no approval probability or score, uses no personal traits, is separate from the match ranking, and submits nothing.
 
 No approval workflow or lender connectivity exists yet.

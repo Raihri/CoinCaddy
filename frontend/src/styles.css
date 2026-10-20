@@ -429,3 +429,33 @@ a.chip { color: var(--primary); }
 .rescue-card.is-recommended { border-color: var(--success); background: var(--success-soft); }
 .rescue-card ul { margin: 6px 0; padding-left: 18px; }
 .rescue-title { margin: 8px 0 4px; font-size: 16px; font-weight: 600; letter-spacing: var(--tight); }
+
+/* Financing Readiness (layout: images/06-funding-matches.png, Readiness card beside Compare options; tokens: design.md) */
+.funding-grid { display: grid; grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.funding-grid .section-title { margin-bottom: 12px; }
+.readiness-card { display: grid; gap: 12px; min-width: 0; }
+.readiness-card .section-title { margin-bottom: 0; }
+.readiness-pick select { width: 100%; }
+.readiness-state { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; }
+.readiness-headline { margin: 0; font-weight: 500; overflow-wrap: anywhere; }
+.ready-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.ready-item { display: flex; gap: 12px; align-items: flex-start; min-width: 0; }
+.ready-mark { width: 34px; height: 34px; flex: none; border-radius: 8px; display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+.is-present .ready-mark { background: var(--success-soft); color: var(--success); }
+.is-uncertain .ready-mark { background: var(--warning-soft); color: var(--warning); }
+.is-missing .ready-mark { background: var(--danger-soft); color: var(--danger); }
+.ready-body { min-width: 0; flex: 1; padding-top: 6px; }
+.ready-body summary { cursor: pointer; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; list-style: none; }
+.ready-body summary::-webkit-details-marker { display: none; }
+.ready-label { font-size: 13px; font-weight: 500; overflow-wrap: anywhere; min-width: 0; }
+.ready-word { font-size: 12px; font-weight: 600; flex: none; }
+.is-present .ready-word { color: var(--success); }
+.is-uncertain .ready-word { color: var(--warning); }
+.is-missing .ready-word { color: var(--danger); }
+.ready-finding { margin: 6px 0; font-size: 13px; overflow-wrap: anywhere; }
+.ready-facts { margin: 0 0 4px; display: grid; gap: 6px; font-size: 12px; }
+.ready-facts dt { color: var(--text-secondary); font-weight: 500; }
+.ready-facts dd { margin: 0; overflow-wrap: anywhere; }
+.ready-subtitle { margin: 4px 0 0; font-size: 14px; font-weight: 600; letter-spacing: var(--tight); }
+.ready-steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 13px; overflow-wrap: anywhere; }
+@media (max-width: 1100px) { .funding-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; } }

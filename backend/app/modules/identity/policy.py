@@ -51,6 +51,12 @@ ROLE_MATRIX: dict[str, frozenset[str]] = {
     # Rescue plans (proposals only; nothing is changed) for a saved Payment Review.
     "rescue.run": frozenset({"owner", "bookkeeper"}),
     "rescue.read": frozenset({"owner", "bookkeeper"}),
+    # Financing Readiness checklist for one product of a saved Funding Match (saves a check; applies to no lender).
+    "readiness.run": frozenset({"owner", "bookkeeper"}),
+    "readiness.read": frozenset({"owner", "bookkeeper"}),
+    # Document register (owner ID, trade licence, ...): bookkeepers may see the entries; only the owner records or voids them.
+    "documents.read": frozenset({"owner", "bookkeeper"}),
+    "documents.write": frozenset({"owner"}),
     # Read the business's audit history.
     "audit.read": frozenset({"owner", "bookkeeper"}),
 }

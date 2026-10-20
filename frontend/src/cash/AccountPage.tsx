@@ -65,7 +65,6 @@ export function AccountPage() {
 
       <section className="card" aria-labelledby="periods-title">
         <h2 id="periods-title" className="card-title">Reconciliation periods</h2>
-        <p className="muted small">Opening anchor + posted movements − closing anchor must be exactly zero. A zero residual only counts as complete when every date has declared coverage.</p>
         <div className="table-wrap">
           <table className="table">
             <thead><tr><th>Period</th><th className="right">Opening</th><th className="right">Movements</th><th className="right">Closing</th><th className="right">Residual</th><th>Coverage gaps</th><th>Status</th></tr></thead>
@@ -92,7 +91,6 @@ export function AccountPage() {
         <CoverageCard acc={acc} base={base} canManage={canManage} onChange={setPos} />
       </div>
       <RestrictionsCard acc={acc} base={base} canManage={canManage} money={money} exp={exp} onChange={setPos} onVoid={voidItem} />
-      <p className="muted small">Calculation {pos.calc_version}. Balances are never converted between currencies. Fresh means verified within {pos.fresh_max_age_days} days.</p>
     </>
   );
 }
@@ -146,7 +144,6 @@ function AnchorsCard({ acc, base, canManage, money, exp, onChange, onVoid }: Car
   return (
     <section className="card" aria-labelledby="anchors-title">
       <h2 id="anchors-title" className="card-title">Balance anchors</h2>
-      <p className="muted small">The balance at the end of a date, from a statement or a cash count.</p>
       <div className="table-wrap">
         <table className="table">
           <thead><tr><th>Date</th><th className="right">Balance</th><th>Source</th>{canManage && <th />}</tr></thead>
@@ -214,7 +211,6 @@ function CoverageCard({ acc, base, canManage, onChange }: CardProps) {
   return (
     <section className="card" aria-labelledby="coverage-title">
       <h2 id="coverage-title" className="card-title">Source coverage</h2>
-      <p className="muted small">Dates for which every movement has been posted. Without coverage, a balanced period is not proven complete.</p>
       <ul className="chip-list">
         {acc.coverage.length === 0 && <li className="muted">No coverage declared.</li>}
         {acc.coverage.map((c) => <li key={c.start} className="badge badge-info">{fmtDate(c.start)} – {fmtDate(c.end)}</li>)}
@@ -273,7 +269,6 @@ function RestrictionsCard({ acc, base, canManage, money, exp, onChange, onVoid }
   return (
     <section className="card" aria-labelledby="restrict-title">
       <h2 id="restrict-title" className="card-title">Restricted funds</h2>
-      <p className="muted small">Money in this account that cannot be spent (deposits, liens, held funds). It is subtracted from usable cash.</p>
       <div className="table-wrap">
         <table className="table">
           <thead><tr><th>Reason</th><th>Effective</th><th className="right">Amount</th>{canManage && <th />}</tr></thead>

@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     mock_services_url: str = "http://127.0.0.1:8100"
     # Shared password for the synthetic demo users created by the seed script. Local demo only.
     demo_user_password: str = "change-me-demo"
+    # Key for the keyed hash of payee bank/wallet numbers (only the hash and last four digits are stored). Local demo only.
+    destination_hash_key: str = "change-me-local-destination-key"
     # Private directory for original uploaded files; empty means <repo>/storage/private.
     storage_dir: str = ""
 

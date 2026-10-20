@@ -8,8 +8,8 @@ export function ApprovalInbox({ items, pendingCount, money, selected, onReview, 
   onReview: (id: string) => void; canPropose: boolean; onPropose: () => void;
 }) {
   const [showClosed, setShowClosed] = useState(false);
-  const open = items.filter((p) => p.state === "pending" || p.state === "approved");
-  const closed = items.filter((p) => !(p.state === "pending" || p.state === "approved"));
+  const open = items.filter(isOpen);
+  const closed = items.filter((p) => !isOpen(p));
   const shown = showClosed ? [...open, ...closed] : open;
   return (
     <section className="card inbox-card" aria-labelledby="inbox-title">
@@ -18,7 +18,7 @@ export function ApprovalInbox({ items, pendingCount, money, selected, onReview, 
         <span className="badge badge-warning">{pendingCount} pending</span>
       </div>
       {shown.length === 0 && (
-        <p className="muted">{closed.length ? "Nothing waiting for a decision." : "No proposals yet."} Proposals only record an exact action; nothing is sent or paid.</p>
+        <p className="muted">{closed.length ? "Nothing waiting for a decision." : "No proposals yet."} Proposals record an exact action; an approved one runs only in the sandbox.</p>
       )}
       <ul className="inbox-list">
         {shown.map((p) => {
@@ -48,6 +48,12 @@ export function ApprovalInbox({ items, pendingCount, money, selected, onReview, 
       </div>
     </section>
   );
+}
+
+// Still needs someone: a decision, a release, or a sandbox run that has no final outcome yet.
+function isOpen(p: Proposal): boolean {
+  if (p.state === "pending" || p.state === "approved") return true;
+  return p.state === "executable" && !(p.execution && (p.execution.outcome === "succeeded" || p.execution.outcome === "rejected"));
 }
 
 export function subtitle(p: Proposal, format: (minor: number, currency: string) => string): string {

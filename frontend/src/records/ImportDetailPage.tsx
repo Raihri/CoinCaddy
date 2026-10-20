@@ -80,7 +80,6 @@ export function ImportDetailPage() {
       </div>
 
       {message && <p className={`badge badge-${message.kind}`} role="status">{message.text}</p>}
-      {batch.status !== "posted" && <p className="notice">{batch.notice}</p>}
       {batch.status === "posted" && (
         <p className="badge badge-success">Posted {batch.posted_count} rows to the ledger on {new Date(batch.posted_at!).toLocaleString("en-GB")}.</p>
       )}
@@ -259,13 +258,11 @@ function MappingCard({ batch, busy, onApply }: { batch: ImportBatch; busy: boole
   return (
     <section className="card" aria-labelledby="map-title">
       <h2 id="map-title" className="card-title">Field mapping</h2>
-      <p className="muted small">Tell us which column holds each field. Amounts use “.” for decimals; commas only as thousands or lakh separators.</p>
       <div className="form-grid">
         {FIELDS.map(([key, label, required]) => (
           <Field key={key} label={`${label}${required ? "" : " (optional)"}`}>{columnSelect(key, required)}</Field>
         ))}
         <Field label="Date format"
-               hint={formats.length > 1 ? undefined : formats.length === 1 ? "Detected from the file." : undefined}
                error={formats.length > 1 && !m.date_format ? `Ambiguous: dates fit ${formats.join(" and ")}. Choose the one your bank uses.` : undefined}>
           <select className="select" value={m.date_format ?? ""} onChange={(e) => setM({ ...m, date_format: e.target.value || null })}>
             <option value="">Choose a format</option>

@@ -5,6 +5,8 @@ import { ProposalReview } from "../approvals/ProposalReview";
 import { ProposeForm } from "../approvals/ProposeForm";
 import type { Inbox, Policy, Proposal } from "../approvals/types";
 import { ROLE_LABELS, useSession, type Membership } from "../auth/session";
+import { ExecutionLog } from "../executor/ExecutionLog";
+import type { Adapters } from "../executor/types";
 import { formatMoney } from "../money";
 import { exponentOf } from "../settings/fields";
 
@@ -47,6 +49,15 @@ const APPROVAL_KIND: Record<string, string> = {
   invoice_reminder: "invoice reminder",
   supplier_payment: "supplier payment",
   financing_application: "financing application",
+};
+
+const FRAUD_RULE: Record<string, string> = {
+  duplicate_payment: "possible duplicate",
+  unusual_payee_amount: "unusual amount",
+  split_near_limit: "split payment",
+  lookalike_payee: "lookalike payee",
+  destination_change: "destination change",
+  paid_without_settlement: "missing settlement",
 };
 
 const roleLabel =(r: unknown) => ROLE_LABELS[r as Membership["role"]] ?? String(r);
@@ -185,6 +196,33 @@ function describe(e: AuditEvent): string {
     case "approvals.decide:denied":
     case "approvals.release:denied":
       return `Tried to ${e.action.split(".")[1]} an approval without permission`;
+    case "fraud.scan:success":
+      return `Ran fraud checks (${d.rules_version}): ${d.flags_created} new flag(s)${d.holds_added ? `, ${d.holds_added} payment(s) put on hold` : ""}`;
+    case "fraud.review:success":
+      return `${d.decision === "rejected" ? "Cleared" : d.decision === "confirmed" ? "Marked for investigation" : "Deferred"} a ${FRAUD_RULE[d.rule as string] ?? "fraud"} flag: ${d.reason}${d.hold_released ? " (hold lifted)" : ""}`;
+    case "fraud.review:conflict":
+    case "fraud.review:failed":
+      return `Fraud flag review refused: ${d.reason}`;
+    case "payees.destination_record:success":
+      return `Recorded ${d.is_change ? "a changed" : "the first"} ${d.kind === "mobile_wallet" ? "wallet" : "bank"} destination for ${d.party}: ${d.institution} ${d.account_number}${d.flag_created ? " (flagged for verification)" : ""}`;
+    case "fraud.read:denied":
+    case "fraud.run:denied":
+    case "fraud.review:denied":
+    case "payees.destinations.write:denied":
+      return "Tried to use the Fraud Monitor without permission";
+    case "executor.execute:success":
+      return `Ran a ${d.tier} ${APPROVAL_KIND[d.kind as string] ?? "action"} in the sandbox: ${d.reference} (nothing real sent or paid)`;
+    case "executor.execute:failed":
+      return d.outcome === "rejected"
+        ? `The sandbox refused a ${APPROVAL_KIND[d.kind as string] ?? "action"} (final)`
+        : `The sandbox gave no answer for a ${APPROVAL_KIND[d.kind as string] ?? "action"}; retry with the same key`;
+    case "executor.execute:conflict":
+      return `Sandbox run blocked, nothing sent: ${((d.failed_checks as string[]) ?? []).join(", ").replace(/_/g, " ")}`;
+    case "executor.replay:success":
+      return `Retried a sandbox ${APPROVAL_KIND[d.kind as string] ?? "action"} with the same key: same outcome${d.reference ? ` (${d.reference})` : ""}, nothing sent again`;
+    case "executor.run:denied":
+    case "executor.read:denied":
+      return "Tried to use the sandbox executor without permission";
     case "account.relabel:not_found":
       return "Tried to rename an account that is not in this business";
     default:
@@ -203,6 +241,7 @@ export function AuditPage() {
   const [timezone, setTimezone] = useState<string | undefined>(undefined);
   const [inbox, setInbox] = useState<Inbox | null>(null);
   const [policy, setPolicy] = useState<Policy | null>(null);
+  const [adapters, setAdapters] = useState<Adapters | null>(null);
   const [selected, setSelected] = useState<Proposal | null>(null);
   const [proposing, setProposing] = useState(false);
   const [historyKey, setHistoryKey] = useState(0);
@@ -221,6 +260,10 @@ export function AuditPage() {
     if (pol.ok) setPolicy(pol.data);
   }, [base, canReadApprovals]);
   useEffect(() => { setSelected(null); setProposing(false); setInbox(null); loadInbox(); }, [loadInbox]);
+  useEffect(() => {
+    if (!base || !can("executor.read")) return setAdapters(null);
+    api<Adapters>(`${base}/sandbox/adapters`).then((r) => setAdapters(r.ok ? r.data : null));
+  }, [base, allowed.join()]);
 
   const fmt = new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: timezone });
   const fmtTime = (iso: string) => fmt.format(new Date(iso));
@@ -280,9 +323,10 @@ export function AuditPage() {
                      onCreated={(p) => { setProposing(false); changed(p); show(p.id); }} onCancel={() => setProposing(false)} />
       )}
       {selected && base && (
-        <ProposalReview url={`${base}/approvals`} proposal={selected} policy={policy} money={money} fmtTime={fmtTime} timezone={timezone}
+        <ProposalReview base={base} proposal={selected} policy={policy} money={money} fmtTime={fmtTime} timezone={timezone} canRun={can("executor.run")}
                         onChanged={changed} onClose={() => setSelected(null)} />
       )}
+      {base && can("executor.read") && <ExecutionLog base={base} adapters={adapters} refreshKey={historyKey} fmtTime={fmtTime} />}
     </>
   );
 }

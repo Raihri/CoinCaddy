@@ -103,7 +103,6 @@ export function ObligationDetailPage() {
               : <VoidButton label="Mark as disputed" onVoid={(reason) => act("/dispute", { disputed: true, reason }, "Marked as disputed.")} />}
             {ob.allocated_minor === 0 && <VoidButton label="Cancel invoice or bill" onVoid={(reason) => act("/cancel", { reason }, "Cancelled.")} />}
           </div>
-          <p className="muted small">A dispute keeps the amount outstanding but shows it separately from normal dues. Cancelling is only possible when nothing is paid.</p>
         </section>
       )}
     </>
@@ -160,7 +159,7 @@ type Permission = { id: string; agreed_due_date: string; evidence_reference: str
 
 // A documented agreement to pay this discretionary bill later. It changes nothing on the bill: a Rescue Plan option may only
 // "move" a bill that has one.
-function DeferralPermissions({ base, ob, canWrite }: { base: string; ob: Detail; canWrite: boolean }) {
+function DeferralPermissions({ base, canWrite }: { base: string; ob: Detail; canWrite: boolean }) {
   const [rows, setRows] = useState<Permission[]>([]);
   const [date, setDate] = useState("");
   const [ref, setRef] = useState("");
@@ -177,7 +176,6 @@ function DeferralPermissions({ base, ob, canWrite }: { base: string; ob: Detail;
   return (
     <section className="card" style={{ marginTop: 16 }} aria-labelledby="perm-title">
       <h2 id="perm-title" className="card-title">Permission to pay later</h2>
-      <p className="muted small">Record only a real agreement from the supplier. A Rescue Plan can propose paying this bill later only when one is documented. The bill itself is not changed (due {fmtDate(ob.due_date)}).</p>
       {rows.length === 0 && <p className="muted">No permission is documented.</p>}
       {rows.map((p) => (
         <p key={p.id} className={p.voided ? "muted" : ""}>
@@ -190,7 +188,7 @@ function DeferralPermissions({ base, ob, canWrite }: { base: string; ob: Detail;
         <form className="form-grid" onSubmit={add} noValidate aria-label="Document a permission">
           {error && <p className="badge badge-danger span-2" role="alert">{error}</p>}
           <Field label="Supplier agreed to be paid by"><input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
-          <Field label="Where it is documented" hint="For example: email from the supplier, 12 Oct."><input value={ref} maxLength={120} onChange={(e) => setRef(e.target.value)} /></Field>
+          <Field label="Where it is documented"><input value={ref} maxLength={120} onChange={(e) => setRef(e.target.value)} /></Field>
           <div className="form-actions span-2"><button type="submit" className="btn btn-primary">Document permission</button></div>
         </form>
       )}

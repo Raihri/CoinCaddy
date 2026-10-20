@@ -95,7 +95,6 @@ export function RecordsPage() {
               </div>
             ))}
           </div>
-          <p className="muted small">Only accounts verified within {pos.fresh_max_age_days} days are added up. Currencies are never combined.</p>
         </section>
       )}
 
@@ -127,7 +126,6 @@ export function RecordsPage() {
               </tbody>
             </table>
           </div>
-          <p className="muted small">Open an account to enter statement balances, declare coverage, and add restricted funds.</p>
         </section>
 
         <section className="card" aria-labelledby="review-title">
@@ -156,7 +154,7 @@ export function RecordsPage() {
 
       <section className="card" aria-labelledby="ledger-title">
         <h2 id="ledger-title" className="card-title">Posted transactions</h2>
-        <p className="muted small">Only posted rows appear here. {ledger ? `${ledger.total} in total; latest 20 shown.` : ""}</p>
+        {ledger && ledger.total > 20 && <p className="muted small">Latest 20 of {ledger.total}.</p>}
         <div className="table-wrap">
           <table className="table">
             <thead><tr><th>Date</th><th>Account</th><th>Description</th><th>Reference</th><th className="right">Amount</th></tr></thead>
@@ -189,7 +187,6 @@ function UploadCard({ accounts }: { accounts: { id: string; label: string; curre
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const canStage = active?.allowed_actions.includes("import.stage") ?? false;
-  const canPost = active?.allowed_actions.includes("import.commit") ?? false;
 
   useEffect(() => { if (!accountId && accounts[0]) setAccountId(accounts[0].id); }, [accounts, accountId]);
 
@@ -217,11 +214,7 @@ function UploadCard({ accounts }: { accounts: { id: string; label: string; curre
         <span className="nav-mono" aria-hidden="true">UP</span>
         <div>
           <h2 id="upload-title" className="card-title">Import new records</h2>
-          <p className="muted small">
-            Upload a bank or wallet statement as .csv (UTF-8) or .xlsx: up to 2 MB, 5,000 rows, 30 columns, one sheet,
-            no formulas or macros. Rows are staged for review and are not official until posted.
-            {!canPost && " An owner or bookkeeper must review and post them."}
-          </p>
+          <p className="muted small">Upload a bank CSV/XLSX or add an invoice and bill manually.</p>
         </div>
       </div>
       {canStage ? (

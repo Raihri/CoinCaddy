@@ -1,7 +1,7 @@
 """Approved Action Workflow API: propose an exact action, approve or reject it under its tier, and release it as executable.
 
 Nothing here sends a reminder, moves money, or contacts a lender. "Executable" only records that every gate was
-re-checked immediately before release; the sandbox executor (a later prompt) must check again before it acts.
+re-checked immediately before release; the sandbox executor (app.modules.executor) checks again before it acts.
 """
 
 import re
@@ -22,6 +22,8 @@ from app.modules.approvals.policy import (KINDS, POLICY_VERSION, REAUTH_MAX_FAIL
                                           VERIFICATION_METHODS, envelope, iso, proposal_hash, state)
 from app.modules.audit.service import Actor, record_event
 from app.modules.business_setup.schemas import clean_text
+from app.modules.executor.service import summaries as execution_summaries
+from app.modules.fraud.service import holds_for, run_scan
 from app.modules.identity.deps import BusinessContext, require
 from app.modules.identity.passwords import verify_password
 from app.modules.obligations.service import list_obligations
@@ -261,8 +263,9 @@ def _decision_out(d) -> dict:
             "verification": d["verification"], "checks": d["checks"]}
 
 
-def _out(row, decisions: list, ctx: BusinessContext, now: datetime) -> dict:
+def _out(row, decisions: list, ctx: BusinessContext, now: datetime, holds: list | None = None, execution: dict | None = None) -> dict:
     st = state(row, decisions, now)
+    holds = holds or []
     approved = next((d for d in decisions if d["event"] == "approved"), None)
     is_owner = ctx.role == REQUIRED_ROLE
     own = row["proposed_by"] == ctx.user.id
@@ -276,11 +279,14 @@ def _out(row, decisions: list, ctx: BusinessContext, now: datetime) -> dict:
         "created_at": iso(row["created_at"]), "expires_at": iso(row["expires_at"]),
         "state": st, "expired_after_approval": st == "expired" and approved is not None,
         "decisions": [_decision_out(d) for d in decisions],
-        "can": {"approve": is_owner and st == "pending" and not (row["second_reviewer_required"] and own),
+        "fraud_holds": holds,
+        "can": {"approve": is_owner and st == "pending" and not (row["second_reviewer_required"] and own) and not holds,
                 "reject": is_owner and st == "pending",
                 "withdraw": st == "pending" and (own or is_owner),
-                "release": is_owner and st == "approved"},
-        "executed": False,
+                "release": is_owner and st == "approved" and not holds},
+        # Set by the sandbox executor: "executed" only when its adapter returned a sandbox reference.
+        "execution": execution,
+        "executed": bool(execution and execution["outcome"] == "succeeded"),
     }
 
 
@@ -302,7 +308,7 @@ def _refuse(db: Session, ctx: BusinessContext, action: str, row, code: int, mess
 @router.get("/policy")
 def policy(ctx: BusinessContext = Depends(require("approvals.read"))) -> dict:
     return {"version": POLICY_VERSION, "required_role": REQUIRED_ROLE, "kinds": KINDS, "tiers": TIERS, "verification_methods": VERIFICATION_METHODS,
-            "executor": "not built: approval only marks an action executable; nothing is sent or paid"}
+            "executor": "sandbox only: an executable proposal can be run once through its mock adapter; nothing real is sent or paid"}
 
 
 @router.get("")
@@ -311,7 +317,9 @@ def list_proposals(state_filter: Annotated[Literal["pending", "approved", "execu
     now = utc_now()
     rows = db.execute(text(_PSEL + " ORDER BY p.created_at DESC LIMIT 100"), {"b": ctx.business_id}).mappings().all()
     decisions = _decisions(db, [r["id"] for r in rows])
-    items = [_out(r, decisions[r["id"]], ctx, now) for r in rows]
+    holds = holds_for(db, ctx.business_id, [r["id"] for r in rows])
+    runs = execution_summaries(db, ctx.business_id, [r["id"] for r in rows])
+    items = [_out(r, decisions[r["id"]], ctx, now, holds[r["id"]], runs[r["id"]]) for r in rows]
     counts = {s: sum(1 for i in items if i["state"] == s) for s in ("pending", "approved", "executable", "rejected", "withdrawn", "expired")}
     if state_filter == "open":
         items = [i for i in items if i["state"] in ("pending", "approved")]
@@ -323,7 +331,8 @@ def list_proposals(state_filter: Annotated[Literal["pending", "approved", "execu
 @router.get("/{proposal_id}")
 def get_proposal(proposal_id: UUID, ctx: BusinessContext = Depends(require("approvals.read")), db: Session = Depends(get_session)) -> dict:
     row = _load(db, ctx, proposal_id)
-    return _out(row, _decisions(db, [row["id"]])[row["id"]], ctx, utc_now())
+    return _out(row, _decisions(db, [row["id"]])[row["id"]], ctx, utc_now(), holds_for(db, ctx.business_id, [row["id"]])[row["id"]],
+                execution_summaries(db, ctx.business_id, [row["id"]])[row["id"]])
 
 
 # --- writing ------------------------------------------------------------------------------------------------
@@ -355,9 +364,10 @@ def propose(body: ProposalIn, ctx: BusinessContext = Depends(require("approvals.
          "p": canonical(payload), "h": digest, "u": ctx.user.id, "ur": ctx.role, "c": created, "e": expires}).scalar_one()
     record_event(db, action="approvals.propose", outcome="success", actor=_actor(ctx), business_id=ctx.business_id, target_type="action_proposal",
                  target_id=pid, details={"kind": kind, "tier": tier, "expires_at": iso(expires), "payload_sha256": digest[:16]})
+    if kind == "supplier_payment":  # the Fraud Monitor checks a proposed payment at once and may hold it
+        run_scan(db, ctx.business_id, ctx.user.id, "proposal", pid)
     db.commit()
-    row = _load(db, ctx, pid)
-    return _out(row, [], ctx, utc_now())
+    return get_proposal(pid, ctx, db)
 
 
 def _reauth(db: Session, ctx: BusinessContext, row, password: str | None) -> datetime:
@@ -396,6 +406,13 @@ def decide(proposal_id: UUID, body: DecisionIn, ctx: BusinessContext = Depends(r
         if row["second_reviewer_required"] and row["proposed_by"] == ctx.user.id:
             _refuse(db, ctx, act, row, status.HTTP_409_CONFLICT, "This action needs a second reviewer: you proposed it, so another owner must approve it.",
                     reason="self-approval")
+        if row["kind"] == "supplier_payment":
+            run_scan(db, ctx.business_id, ctx.user.id, "approval", row["id"])
+            held = holds_for(db, ctx.business_id, [row["id"]])[row["id"]]
+            if held:
+                _refuse(db, ctx, act, row, status.HTTP_409_CONFLICT,
+                        f"This payment is on hold in the Fraud Monitor ({'; '.join(h['title'] for h in held)}). It can be approved only after the flag is cleared.",
+                        reason="fraud hold")
         if row["tier"] == "T3":
             if body.verification is None:
                 raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "A T3 approval needs a documented verification.")
@@ -442,7 +459,7 @@ def withdraw(proposal_id: UUID, body: WithdrawIn, ctx: BusinessContext = Depends
     return get_proposal(proposal_id, ctx, db)
 
 
-def _release_checks(db: Session, ctx: BusinessContext, row, decisions: list, seen_hash: str, now: datetime) -> list[dict]:
+def release_checks(db: Session, ctx: BusinessContext, row, decisions: list, seen_hash: str, now: datetime) -> list[dict]:
     checks: list[dict] = []
 
     def add(code: str, ok: bool, detail: str) -> None:
@@ -466,6 +483,10 @@ def _release_checks(db: Session, ctx: BusinessContext, row, decisions: list, see
     if row["tier"] == "T3":
         add("t3_gates", approved is not None and approved["reauthenticated_at"] is not None and approved["verification"] is not None,
             "Owner re-authenticated and documented a verification" if approved and approved["verification"] else "Re-authentication or verification missing")
+    if row["kind"] == "supplier_payment":
+        held = holds_for(db, ctx.business_id, [row["id"]])[row["id"]]
+        add("fraud_hold", not held, "No Fraud Monitor flag holds this payment" if not held
+            else "Held by the Fraud Monitor: " + "; ".join(h["title"] for h in held))
     p = row["payload"]
     try:
         fresh = BUILDERS[row["kind"]](db, ctx.business_id, _today(db, ctx.business_id), p, self_id=row["id"], release=True)
@@ -485,7 +506,9 @@ def release(proposal_id: UUID, body: ReleaseIn, ctx: BusinessContext = Depends(r
     st = state(row, decisions, now)
     if st not in ("approved", "expired"):
         _refuse(db, ctx, "approvals.release", row, status.HTTP_409_CONFLICT, f"Only an approved proposal can be released; this one is {st}.", reason=f"state {st}")
-    checks = _release_checks(db, ctx, row, decisions, body.payload_sha256, now)
+    if row["kind"] == "supplier_payment":  # check again: a destination change or a new payment may have appeared since approval
+        run_scan(db, ctx.business_id, ctx.user.id, "release", row["id"])
+    checks = release_checks(db, ctx, row, decisions, body.payload_sha256, now)
     failed = [c for c in checks if not c["ok"]]
     if failed:
         record_event(db, action="approvals.release", outcome="conflict", actor=_actor(ctx), business_id=ctx.business_id, target_type="action_proposal",

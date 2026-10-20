@@ -44,14 +44,12 @@ export function TransfersPage() {
         <div>
           <p className="muted small"><Link className="link" to="/records">Records</Link> / Transfers</p>
           <h1 className="page-title">Own-account transfers</h1>
-          <p className="page-sub">Money moved between your own accounts is not income or spending. Pair both sides so it is never counted twice.</p>
         </div>
       </div>
       {message && <p className={`badge badge-${message.kind}`} role="status">{message.text}</p>}
 
       <section className="card" aria-labelledby="sugg-title">
         <h2 id="sugg-title" className="card-title">Suggested pairs</h2>
-        <p className="muted small">Same amount and currency, two different accounts, at most 3 days apart. Nothing is linked until you confirm.</p>
         {pos.transfer_suggestions.length === 0 && <p className="muted">No suggestions.</p>}
         <ul className="pair-list">
           {pos.transfer_suggestions.map((s) => (

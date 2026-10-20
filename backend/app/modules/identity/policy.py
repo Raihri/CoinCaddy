@@ -63,6 +63,17 @@ ROLE_MATRIX: dict[str, frozenset[str]] = {
     "approvals.propose": frozenset({"owner", "bookkeeper"}),
     "approvals.decide": frozenset({"owner"}),
     "approvals.release": frozenset({"owner"}),
+    # Transaction Fraud Monitor: see flags, holds, and payee destinations / run the rules now / confirm, clear, or defer a
+    # flag (clearing a flag that holds a payment is owner-only, checked in the route) / record a payee's bank or wallet
+    # destination. Staff take no part. A flag is suspected activity, never a fraud verdict; nothing here pays or blocks a ledger row.
+    "fraud.read": frozenset({"owner", "bookkeeper"}),
+    "fraud.run": frozenset({"owner", "bookkeeper"}),
+    "fraud.review": frozenset({"owner", "bookkeeper"}),
+    "payees.destinations.write": frozenset({"owner", "bookkeeper"}),
+    # Sandbox Action Executor: see the sandbox adapters and the redacted execution log / run an approved and released
+    # proposal once through its mock adapter (owner only, like release). Nothing real is sent, submitted, paid, or shared.
+    "executor.read": frozenset({"owner", "bookkeeper"}),
+    "executor.run": frozenset({"owner"}),
     # Read the business's audit history.
     "audit.read": frozenset({"owner", "bookkeeper"}),
 }

@@ -1,5 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api";
+import { SandboxRun } from "../executor/SandboxRun";
 import { errorFor, type FieldErrors } from "../settings/apiErrors";
 import { Field } from "../settings/fields";
 import { subtitle } from "./ApprovalInbox";
@@ -9,10 +11,12 @@ const EVENT_LABEL = { approved: "Approved", rejected: "Rejected", withdrawn: "Wi
 
 // Review of one exact proposal: what will happen, its hash, the gates for its tier, the decision history, and the
 // actions the signed-in user may take. The server re-checks every rule; this only shows them and gives early feedback.
-export function ProposalReview({ url, proposal, policy, money, fmtTime, timezone, onChanged, onClose }: {
-  url: string; proposal: Proposal; policy: Policy | null; money: (minor: number, currency: string) => string; timezone: string | undefined;
+export function ProposalReview({ base, proposal, policy, canRun, money, fmtTime, timezone, onChanged, onClose }: {
+  base: string; proposal: Proposal; policy: Policy | null; canRun: boolean;
+  money: (minor: number, currency: string) => string; timezone: string | undefined;
   fmtTime: (iso: string) => string; onChanged: (p: Proposal) => void; onClose: () => void;
 }) {
+  const url = `${base}/approvals`;
   const p = proposal;
   const today = isoDateIn(timezone);                                // business timezone, as the server checks it
   const proposedOn = isoDateIn(timezone, new Date(p.created_at));
@@ -103,6 +107,12 @@ export function ProposalReview({ url, proposal, policy, money, fmtTime, timezone
         <span className={`badge ${badgeCls}`}>{badgeText}</span>
         <span className={`inbox-status ${s.cls}`}>{s.text}</span>
       </div>
+      {p.fraud_holds.length > 0 && (p.state === "pending" || p.state === "approved" || (p.state === "executable" && !p.execution)) && (
+        <p className="badge badge-danger block-badge" role="alert">
+          On hold: {p.fraud_holds.map((h) => h.title).join("; ")}. It cannot be {p.state === "executable" ? "run in the sandbox" : "approved or released"} until the flag is cleared in the{" "}
+          <Link className="link" to="/fraud-monitor">Fraud Monitor</Link>. Suspected activity only, not a finding of fraud.
+        </p>
+      )}
       {!p.integrity.payload_hash_matches && (
         <p className="badge badge-danger block-badge" role="alert">The stored proposal does not match its hash. It cannot be approved or released.</p>
       )}
@@ -160,7 +170,9 @@ export function ProposalReview({ url, proposal, policy, money, fmtTime, timezone
         </div>
       )}
       {notice && <p className="badge badge-danger block-badge" role="alert">{notice}</p>}
-      {p.state === "executable" && <p className="notice">Marked executable. Nothing has been sent or paid: the sandbox executor is not built yet, and it must check again before acting.</p>}
+      {p.state === "executable" && (
+        <SandboxRun base={base} proposal={p} canRun={canRun} fmtTime={fmtTime} onChanged={onChanged} />
+      )}
 
       {mode === "none" && (
         <div className="form-actions">

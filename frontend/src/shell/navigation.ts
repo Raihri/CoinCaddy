@@ -17,6 +17,6 @@ export const DESTINATIONS: Destination[] = [
   { path: "/cash-outlook", label: "Cash Outlook", icon: "outlook", available: true, plannedIn: "Prompt 08" },
   { path: "/payment-review", label: "Payment Review", icon: "review", available: true, plannedIn: "Prompt 10" },
   { path: "/funding-matches", label: "Funding Matches", icon: "funding", available: true, plannedIn: "Prompt 12" },
-  { path: "/fraud-monitor", label: "Fraud Monitor", icon: "fraud", available: false, plannedIn: "Prompt 16" },
+  { path: "/fraud-monitor", label: "Fraud Monitor", icon: "fraud", available: true, plannedIn: "Prompt 16" },
   { path: "/approvals-audit", label: "Approvals & Audit", icon: "approvals", available: true, plannedIn: "Prompt 15" },
 ];

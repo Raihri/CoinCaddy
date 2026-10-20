@@ -11,7 +11,13 @@ export type Proposal = {
   payload: Record<string, unknown>; payload_sha256: string; integrity: { payload_hash_matches: boolean };
   proposed_by: { id: string; name: string; role: string }; created_at: string; expires_at: string;
   state: ProposalState; expired_after_approval: boolean; decisions: Decision[];
-  can: { approve: boolean; reject: boolean; withdraw: boolean; release: boolean }; executed: false;
+  fraud_holds: { flag_id: string; rule: string; title: string }[];
+  can: { approve: boolean; reject: boolean; withdraw: boolean; release: boolean };
+  execution: ExecutionSummary | null; executed: boolean;
+};
+// Set by the sandbox executor once an executable proposal was sent to its mock adapter.
+export type ExecutionSummary = {
+  execution_id: string; adapter: string; outcome: "succeeded" | "rejected" | "failed" | "dispatched"; reference: string | null; completed_at: string | null;
 };
 export type Inbox = { items: Proposal[]; counts: Record<ProposalState, number> };
 export type Policy = { version: string; verification_methods: Record<string, string>; tiers: Record<string, { max_hours: number; default_hours: number; gates: string[] }> };
@@ -21,13 +27,23 @@ export function statusLine(p: Proposal): { text: string; cls: string } {
   switch (p.state) {
     case "pending":
       if (!p.integrity.payload_hash_matches) return { text: "On hold: integrity check failed", cls: "text-danger" };
+      if (p.fraud_holds.length) return { text: `On hold in Fraud Monitor: ${p.fraud_holds[0].title}`, cls: "text-danger" };
       return p.tier === "T3"
         ? { text: p.second_reviewer_required ? "Owner re-auth and second reviewer required" : "Owner re-auth required", cls: "text-danger" }
         : { text: "Owner approval required", cls: "text-warning" };
     case "approved":
+      if (p.fraud_holds.length) return { text: `Approved, now on hold in Fraud Monitor: ${p.fraud_holds[0].title}`, cls: "text-danger" };
       return { text: "Approved: release check needed", cls: "text-info" };
     case "executable":
-      return { text: "Executable: waiting for the sandbox executor (not built)", cls: "text-success" };
+      switch (p.execution?.outcome) {
+        case "succeeded": return { text: `Executed in sandbox: ${p.execution.reference}`, cls: "text-success" };
+        case "rejected": return { text: "Refused by the sandbox: final outcome", cls: "text-danger" };
+        case "failed":
+        case "dispatched": return { text: "Sandbox gave no answer: retry with the same key", cls: "text-warning" };
+        default:
+          if (p.fraud_holds.length) return { text: `Released, now on hold in Fraud Monitor: ${p.fraud_holds[0].title}`, cls: "text-danger" };
+          return { text: "Executable: ready to run in the sandbox", cls: "text-info" };
+      }
     case "expired":
       return { text: p.expired_after_approval ? "Approval expired before release" : "Expired without a decision", cls: "text-danger" };
     case "rejected":
@@ -54,7 +70,13 @@ export const CHECK_LABELS: Record<string, string> = {
   not_expired: "Not expired",
   payload_integrity: "Payload integrity (hash)",
   t3_gates: "Re-authentication and verification",
+  fraud_hold: "No Fraud Monitor hold",
   records_current: "Records still match",
+  released: "Approved and released",
+  business_scope: "Business scope",
+  adapter: "Sandbox adapter",
+  destination_on_file: "Payee destination on file",
+  idempotency_key: "Idempotency key",
 };
 
 // A calendar date (YYYY-MM-DD) in the business timezone, so the form and the server agree on "today".

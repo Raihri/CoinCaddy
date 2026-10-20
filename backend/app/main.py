@@ -12,6 +12,8 @@ from app.modules.business_setup.router import router as business_setup_router
 from app.middleware import BodySizeLimit
 from app.modules.cash.router import router as cash_router
 from app.modules.evidence_queue.router import router as evidence_queue_router
+from app.modules.executor.router import router as executor_router
+from app.modules.fraud.router import router as fraud_router
 from app.modules.funding.router import router as funding_router
 from app.modules.health.router import router as health_router
 from app.modules.health_summary.router import router as financial_health_router
@@ -56,6 +58,8 @@ def create_app() -> FastAPI:
     app.include_router(readiness_router)
     app.include_router(business_documents_router)
     app.include_router(approvals_router)
+    app.include_router(fraud_router)
+    app.include_router(executor_router)
     # Refuse oversized uploads before multipart parsing (file limit plus room for form overhead).
     app.add_middleware(BodySizeLimit, path_pattern=r"/api/businesses/[^/]+/imports", max_bytes=MAX_FILE_BYTES + 64 * 1024)
     return app

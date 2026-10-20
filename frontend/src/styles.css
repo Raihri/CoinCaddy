@@ -514,3 +514,90 @@ a.chip { color: var(--primary); }
   .review-facts > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
   .btn-review { width: 100%; }
 }
+
+/* Transaction Fraud Monitor (layout: images/07-fraud-monitor.png; tokens: design.md, so the mockup's teal becomes primary blue) */
+.banner-danger { background: var(--danger-soft); border-color: var(--danger-soft); }
+.banner-danger .banner-line { color: var(--danger); }
+.banner-danger .banner-icon { color: var(--danger); }
+.btn-danger { background: var(--danger); color: #fff; }
+.fraud-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.fraud-grid .section-title { margin-bottom: 12px; }
+.dest-card { display: grid; gap: 16px; min-width: 0; }
+.txn-table td { vertical-align: middle; }
+.txn-table tr.is-selected td { background: var(--primary-soft); }
+.txn-payee { min-width: 0; overflow-wrap: anywhere; }
+.badge-button { font: inherit; font-size: 12px; font-weight: 500; border: 0; cursor: pointer; }
+.badge-button:hover { text-decoration: underline; }
+.flag-card { display: grid; gap: 16px; min-width: 0; }
+.flag-card .section-title { margin-bottom: 0; }
+.rule-badge { display: inline-block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em; padding: 4px 12px; border-radius: 16px; flex: none; }
+.rule-high { background: var(--danger-soft); color: var(--danger); }
+.rule-medium { background: var(--warning-soft); color: var(--warning); }
+.flag-reason { margin: 0; overflow-wrap: anywhere; }
+.compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 24px; background: var(--surface-muted); border-radius: 12px; padding: 16px 20px; }
+.compare-single { grid-template-columns: minmax(0, 1fr); }
+.compare-side { display: grid; gap: 10px; align-content: start; min-width: 0; }
+.compare-label { margin: 0; font-size: 12px; font-weight: 500; color: var(--text-secondary); }
+.compare-record { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.compare-record strong { font-size: 14px; font-weight: 600; letter-spacing: -0.04em; }
+.impact { display: grid; gap: 10px; }
+.impact-text { margin: 0; color: var(--text-secondary); overflow-wrap: anywhere; }
+.outcome-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.outcome { display: grid; gap: 2px; border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; min-width: 0; }
+.outcome-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); }
+.outcome-value { font-size: 20px; font-weight: 700; letter-spacing: var(--tight); white-space: nowrap; }
+.hold-list { margin: 0; padding-left: 20px; display: grid; gap: 6px; overflow-wrap: anywhere; }
+.flag-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) auto; gap: 12px; }
+.flag-actions .btn { padding: 10px 16px; }
+.flag-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.flag-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); min-width: 0; }
+.flag-item:last-child { border-bottom: 0; }
+.flag-item.is-selected .flag-title { color: var(--primary); }
+.flag-body { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.flag-title { font-weight: 600; letter-spacing: -0.04em; overflow-wrap: anywhere; }
+@media (max-width: 1100px) { .fraud-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; } }
+@media (max-width: 600px) {
+  .compare, .outcome-list { grid-template-columns: minmax(0, 1fr); }
+  .compare { padding: 14px; }
+  .flag-actions { grid-template-columns: minmax(0, 1fr); }
+  .flag-item { flex-wrap: wrap; }
+  .flag-item .flag-body { flex-basis: calc(100% - 140px); }
+}
+
+/* Sandbox Action Executor: the run step inside the review panel and the execution log below the mockup layout */
+.sandbox-run { display: grid; gap: 12px; border-top: 1px solid var(--border); padding-top: 16px; min-width: 0; }
+.sandbox-head { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; }
+.sandbox-run > .muted { overflow-wrap: anywhere; }
+.sandbox-run code { overflow-wrap: anywhere; word-break: break-all; }
+.sandbox-outcome { display: grid; gap: 12px; border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; min-width: 0; background: var(--surface); }
+.sandbox-outcome.outcome-succeeded { border-color: var(--success); }
+.sandbox-outcome.outcome-rejected { border-color: var(--danger); }
+.sandbox-outcome.outcome-failed, .sandbox-outcome.outcome-dispatched { border-color: var(--warning); }
+.sandbox-outcome-head { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; }
+.sandbox-ref { font-size: 18px; font-weight: 600; letter-spacing: var(--tight); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.sandbox-note { margin: 0; color: var(--text-secondary); overflow-wrap: anywhere; }
+.sandbox-actions { display: grid; gap: 10px; max-width: 640px; }
+.sandbox-actions .form-actions { margin: 0; }
+.exec-card { display: grid; gap: 12px; min-width: 0; }
+.adapter-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.adapter-item { display: grid; gap: 8px; align-content: space-between; justify-items: start; background: var(--surface-muted); border-radius: 12px; padding: 12px 16px; min-width: 0; }
+.adapter-body { display: grid; gap: 2px; min-width: 0; }
+.adapter-name { font-size: 14px; font-weight: 600; letter-spacing: -0.04em; overflow-wrap: anywhere; }
+.adapter-body code { overflow-wrap: anywhere; }
+.exec-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.exec-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); min-width: 0; }
+.exec-item:last-child { border-bottom: 0; }
+.exec-badge { flex: none; min-width: 128px; text-align: center; margin-top: 2px; }
+.exec-body { display: grid; gap: 2px; flex: 1; min-width: 0; }
+.exec-title { font-weight: 600; letter-spacing: -0.04em; overflow-wrap: anywhere; }
+.exec-summary { font-size: 13px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.exec-item .btn { flex: none; }
+@media (max-width: 1100px) { .adapter-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) {
+  .sandbox-outcome { padding: 14px; }
+  .adapter-list { grid-template-columns: minmax(0, 1fr); }
+  .exec-item { flex-wrap: wrap; }
+  .exec-badge { min-width: 0; }
+  .exec-body { flex-basis: 100%; order: 2; }
+  .exec-item .btn { margin-left: auto; }
+}

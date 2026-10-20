@@ -32,7 +32,6 @@ export function ObligationsPage() {
         <div>
           <p className="muted small"><Link className="link" to="/records">Records</Link> / Invoices &amp; bills</p>
           <h1 className="page-title">Invoices &amp; bills</h1>
-          <p className="page-sub">What customers owe you and what you owe suppliers. Original amounts never change; payments and reversals are added on top.</p>
         </div>
         {canWrite && <button type="button" className="btn btn-primary" onClick={() => setShowForm((v) => !v)}>{showForm ? "Close form" : "New invoice or bill"}</button>}
       </div>
@@ -56,7 +55,6 @@ export function ObligationsPage() {
         </section>
         <section className="card" aria-labelledby="upcoming-title">
           <h2 id="upcoming-title" className="card-title">Upcoming supplier payments</h2>
-          <p className="muted small">Outstanding bills due in the next {summary?.upcoming_days ?? 30} days, overdue first.</p>
           {summary?.upcoming_payables.length === 0 && <p className="muted">No bills due soon.</p>}
           {summary?.upcoming_payables.map((u) => (
             <div key={u.currency}>
@@ -168,7 +166,7 @@ function NewObligationForm({ base, onCreated }: { base: string; onCreated: () =>
           {cats.map((c) => <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>)}
         </select>
       </Field>
-      <Field label="Source reference" error={errorFor(errors, "source_reference")} hint="Where the original document is, e.g. invoice book page.">
+      <Field label="Source reference" error={errorFor(errors, "source_reference")}>
         <input value={f.source_reference} maxLength={120} onChange={(e) => setF({ ...f, source_reference: e.target.value })} />
       </Field>
       <Field label="Expected account (optional)" error={errorFor(errors, "settlement_account_id")}>

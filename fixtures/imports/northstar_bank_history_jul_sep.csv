@@ -1,0 +1,14 @@
+Date,Description,Reference,Debit,Credit
+2026-07-28,Customer receipt Eastline Retail,HIST-0701,,"85,000.00"
+2026-08-03,Supplier payment Delta Supplies,HIST-0702,"41,500.00",
+2026-08-06,Rent August,HIST-0703,"25,000.00",
+2026-08-11,Customer receipt Northwind Traders,HIST-0704,,"62,500.00"
+2026-08-19,Customer receipt Eastline Retail,HIST-0705,,"48,000.00"
+2026-08-24,Electricity bill,HIST-0706,"3,900.00",
+2026-08-29,Supplier payment Delta Supplies,HIST-0707,"36,200.00",
+2026-09-02,Customer receipt Pine Market,HIST-0708,,"71,500.00"
+2026-09-06,Rent September,HIST-0709,"25,000.00",
+2026-09-12,Customer receipt Northwind Traders,HIST-0710,,"58,000.00"
+2026-09-18,Transport and delivery,HIST-0711,"6,300.00",
+2026-09-22,Customer receipt Maple Store,HIST-0712,,"44,000.00"
+2026-09-27,Supplier payment Delta Supplies,HIST-0713,"38,750.00",

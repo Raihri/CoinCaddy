@@ -588,8 +588,14 @@
   - **Other checks:** calendar month-end clamping (31 Jan + 1 month = 28 Feb), refusals (unknown account, date out of range, account with no balance), deterministic output, inputs untouched, and the catalogue labelled illustrative with dates.
   - **API, end to end:** receipts imported and classified, a balance anchor, a bill, and an invoice → three eligible products; revenue comes from the classified records; the saved run equals the response, and Verify reproduces it. Staff → 403; another business → 404 on list, read, verify, and catalogue; unknown fields, floats, bad purposes, and another business's account are refused; the success and the staff refusal are audited; the router has only GET and POST and no apply/share route; UPDATE on a saved run is rejected as append-only.
 - **Browser run:**
-  - The demo business (no classified receipts in the last 90 days) honestly returned **no eligible product**, with the reasons, including "records show 0 over the last 90 days".
+  - The demo business at first (no classified receipts in the last 90 days) honestly returned **no eligible product**, with the reasons, including "records show 0 over the last 90 days".
+  - **Demo history file (demo only, not part of the feature):** the file is synthetic sample data that exists only so the demo business can show an eligible match; Funding Matches does not need it. After importing [fixtures/imports/northstar_bank_history_jul_sep.csv](fixtures/imports/northstar_bank_history_jul_sep.csv) (13 rows, 369,000.00 BDT of receipts) and classifying the receipts as sales, the demo business now shows an eligible product in Funding Matches (confirmed by the user in the browser; the exact product and figures were not recorded here).
   - On a throwaway test business with 30,000,000 of classified receipts, a BDT 40,000 need by 27 Oct returned invoice advance (3 badges), working capital line, and term loan, with the funding dates, totals, lowest cash, and the labels. This matches the hand calculation (term loan 10,000,000 + 4,000,000 − 5,000,000 − 706,666 = 8,293,334 on its first installment date). The 1024px page had no horizontal overflow.
+- [backend/tests/test_demo_history_csv.py](backend/tests/test_demo_history_csv.py) (1 test; suite now **339 passed**) imports that CSV through the real import API (dates shifted to stay inside the 90-day window):
+  - all 13 rows parse as valid;
+  - before the receipts are classified nothing is eligible ("records show 0");
+  - after classifying the 6 receipts as sales the stored 90-day revenue is exactly **36,900,000** minor units, and the **working capital line, term loan, and wallet micro-loan** are eligible;
+  - the invoice advance, secured bank loan, and Kenyan line stay excluded (the first because this history has no invoices).
 - `npm run build` passes.
 
 ### Known gaps and risks

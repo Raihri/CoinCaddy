@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.modules.alerts.router import router as alerts_router
+from app.modules.approvals.router import router as approvals_router
 from app.modules.audit.router import router as audit_router
 from app.modules.business_setup.router import reference_router
 from app.modules.business_setup.router import router as business_setup_router
@@ -54,6 +55,7 @@ def create_app() -> FastAPI:
     app.include_router(deferral_permission_router)
     app.include_router(readiness_router)
     app.include_router(business_documents_router)
+    app.include_router(approvals_router)
     # Refuse oversized uploads before multipart parsing (file limit plus room for form overhead).
     app.add_middleware(BodySizeLimit, path_pattern=r"/api/businesses/[^/]+/imports", max_bytes=MAX_FILE_BYTES + 64 * 1024)
     return app

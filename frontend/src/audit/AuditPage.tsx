@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
+import { api } from "../api";
+import { ApprovalInbox } from "../approvals/ApprovalInbox";
+import { ProposalReview } from "../approvals/ProposalReview";
+import { ProposeForm } from "../approvals/ProposeForm";
+import type { Inbox, Policy, Proposal } from "../approvals/types";
 import { ROLE_LABELS, useSession, type Membership } from "../auth/session";
+import { formatMoney } from "../money";
+import { exponentOf } from "../settings/fields";
 
 type AuditEvent = {
   seq: number;
@@ -31,6 +38,15 @@ const SETTING_LABELS: Record<string, string> = {
   timezone: "timezone",
   reserve_amount_minor: "reserve",
   reserve_currency: "reserve",
+};
+
+// Short pages keep the history beside the inbox, as in the mockup; older events load on request.
+const HISTORY_PAGE = 8;
+
+const APPROVAL_KIND: Record<string, string> = {
+  invoice_reminder: "invoice reminder",
+  supplier_payment: "supplier payment",
+  financing_application: "financing application",
 };
 
 const roleLabel =(r: unknown) => ROLE_LABELS[r as Membership["role"]] ?? String(r);
@@ -150,6 +166,25 @@ function describe(e: AuditEvent): string {
       return "Tried to calculate a cash outlook without permission";
     case "cash.manage:denied":
       return "Tried to change cash records without permission";
+    case "approvals.propose:success":
+      return `Proposed a ${d.tier} action: ${APPROVAL_KIND[d.kind as string] ?? d.kind} (nothing sent or paid)`;
+    case "approvals.decide:success":
+      return `${d.decision === "approved" ? "Approved" : "Rejected"} a ${d.tier} ${APPROVAL_KIND[d.kind as string] ?? "action"}${d.reauthenticated ? " after re-authentication" : ""}`;
+    case "approvals.decide:conflict":
+      return `Approval refused: ${d.reason}`;
+    case "approvals.reauth:failed":
+      return `Re-authentication failed for a ${d.tier} approval (${d.reason})`;
+    case "approvals.withdraw:success":
+      return `Withdrew a proposal: ${d.reason}`;
+    case "approvals.release:success":
+      return `Released a ${d.tier} ${APPROVAL_KIND[d.kind as string] ?? "action"} as executable after ${d.checks_passed} checks (not executed)`;
+    case "approvals.release:conflict":
+      return `Release refused: ${d.failed_checks ? (d.failed_checks as string[]).join(", ").replace(/_/g, " ") : d.reason}`;
+    case "approvals.read:denied":
+    case "approvals.propose:denied":
+    case "approvals.decide:denied":
+    case "approvals.release:denied":
+      return `Tried to ${e.action.split(".")[1]} an approval without permission`;
     case "account.relabel:not_found":
       return "Tried to rename an account that is not in this business";
     default:
@@ -157,20 +192,112 @@ function describe(e: AuditEvent): string {
   }
 }
 
+// Layout follows images/08-approvals-and-audit.png: Approval inbox on the left; Funding Passport preview and
+// Activity history on the right. The proposal form and the review panel sit below that layout.
 export function AuditPage() {
-  const { active } = useSession();
+  const { active, profile, options } = useSession();
+  const base = active ? `/api/businesses/${active.business_id}` : null;
+  const allowed = active?.allowed_actions ?? [];
+  const can = (a: string) => allowed.includes(a);
+  const canReadApprovals = can("approvals.read");
+  const [timezone, setTimezone] = useState<string | undefined>(undefined);
+  const [inbox, setInbox] = useState<Inbox | null>(null);
+  const [policy, setPolicy] = useState<Policy | null>(null);
+  const [selected, setSelected] = useState<Proposal | null>(null);
+  const [proposing, setProposing] = useState(false);
+  const [historyKey, setHistoryKey] = useState(0);
+  const [inboxError, setInboxError] = useState<string | null>(null);
+  const money = (m: number, c: string) => formatMoney(m, c, exponentOf(options, c));
+
+  useEffect(() => {
+    if (!base) return;
+    fetch(base).then((r) => (r.ok ? r.json() : null)).then((b: { timezone?: string } | null) => setTimezone(b?.timezone));
+  }, [base]);
+
+  const loadInbox = useCallback(async () => {
+    if (!base || !canReadApprovals) return;
+    const [l, pol] = await Promise.all([api<Inbox>(`${base}/approvals`), api<Policy>(`${base}/approvals/policy`)]);
+    if (l.ok) { setInbox(l.data); setInboxError(null); } else setInboxError(l.message);
+    if (pol.ok) setPolicy(pol.data);
+  }, [base, canReadApprovals]);
+  useEffect(() => { setSelected(null); setProposing(false); setInbox(null); loadInbox(); }, [loadInbox]);
+
+  const fmt = new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: timezone });
+  const fmtTime = (iso: string) => fmt.format(new Date(iso));
+  const scrollTo = (id: string) => requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  const show = (id: string) => {
+    if (!base) return;
+    api<Proposal>(`${base}/approvals/${id}`).then((r) => {
+      if (!r.ok) return setInboxError(r.message);
+      setSelected(r.data);
+      setProposing(false);
+      scrollTo("proposal-review");
+    });
+  };
+  const changed = (p: Proposal) => { setSelected(p); loadInbox(); setHistoryKey((k) => k + 1); };
+
+  return (
+    <>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Approvals &amp; Audit</h1>
+          <p className="page-sub">Owner-controlled actions with a complete record of decisions</p>
+        </div>
+      </div>
+
+      <div className="approvals-grid">
+        <div className="approvals-col">
+          {inboxError && <p className="badge badge-danger block-badge" role="alert">{inboxError}</p>}
+          {!canReadApprovals && (
+            <section className="card" aria-labelledby="inbox-title">
+              <h2 id="inbox-title" className="section-title">Approval inbox</h2>
+              <p className="badge badge-info block-badge" role="status">Only owners and bookkeepers can see proposals. Only owners approve them.</p>
+            </section>
+          )}
+          {canReadApprovals && !inbox && (
+            <section className="card"><h2 className="section-title">Approval inbox</h2><p className="muted">Loading…</p></section>
+          )}
+          {canReadApprovals && inbox && (
+            <ApprovalInbox items={inbox.items} pendingCount={inbox.counts.pending} money={money} selected={selected?.id ?? null}
+                           onReview={show} canPropose={can("approvals.propose")}
+                           onPropose={() => { setProposing(true); setSelected(null); scrollTo("propose-title"); }} />
+          )}
+        </div>
+
+        <div className="approvals-col">
+          <section className="card" aria-labelledby="passport-title">
+            <h2 id="passport-title" className="section-title">Funding Passport preview</h2>
+            <span className="badge badge-info">Unavailable</span>
+            <p className="muted">The Funding Passport is not built yet (Prompt 20). Nothing is shared with any lender from this page.</p>
+          </section>
+          <ActivityHistory base={base} canRead={can("audit.read")} businessName={active?.business_name} timezone={timezone} refreshKey={historyKey} />
+        </div>
+      </div>
+
+      {proposing && base && (
+        <ProposeForm base={base} accounts={profile?.accounts ?? []} money={money} exponent={(c) => exponentOf(options, c)}
+                     canReadReviews={can("paymentreview.read")} canReadReadiness={can("readiness.read")}
+                     onCreated={(p) => { setProposing(false); changed(p); show(p.id); }} onCancel={() => setProposing(false)} />
+      )}
+      {selected && base && (
+        <ProposalReview url={`${base}/approvals`} proposal={selected} policy={policy} money={money} fmtTime={fmtTime} timezone={timezone}
+                        onChanged={changed} onClose={() => setSelected(null)} />
+      )}
+    </>
+  );
+}
+
+function ActivityHistory({ base, canRead, businessName, timezone, refreshKey }: {
+  base: string | null; canRead: boolean; businessName?: string; timezone?: string; refreshKey: number;
+}) {
   const [events, setEvents] = useState<AuditEvent[]>([]);
   const [next, setNext] = useState<number | null>(null);
-  const [timezone, setTimezone] = useState<string | undefined>(undefined);
   const [status, setStatus] = useState<"loading" | "ready" | "forbidden" | "error">("loading");
-
-  const base = active ? `/api/businesses/${active.business_id}` : null;
-  const canRead = active?.allowed_actions.includes("audit.read") ?? false;
 
   const load = useCallback(
     async (before: number | null) => {
       if (!base) return;
-      const r = await fetch(`${base}/audit-events?limit=25${before ? `&before_seq=${before}` : ""}`);
+      const r = await fetch(`${base}/audit-events?limit=${HISTORY_PAGE}${before ? `&before_seq=${before}` : ""}`);
       if (r.status === 403) return setStatus("forbidden");
       if (!r.ok) return setStatus("error");
       const page = (await r.json()) as Page;
@@ -182,14 +309,10 @@ export function AuditPage() {
   );
 
   useEffect(() => {
-    setStatus("loading");
     if (!base) return;
-    fetch(base)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((b: { timezone?: string } | null) => setTimezone(b?.timezone));
     if (canRead) load(null);
     else setStatus("forbidden");
-  }, [base, canRead, load]);
+  }, [base, canRead, load, refreshKey]);
 
   const fmt = new Intl.DateTimeFormat("en-GB", {
     dateStyle: "medium",
@@ -198,32 +321,15 @@ export function AuditPage() {
   });
 
   return (
-    <>
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Approvals &amp; Audit</h1>
-          <p className="page-sub">Owner-controlled actions with a complete record of decisions</p>
-        </div>
-      </div>
-
-      <div className="split">
-        <section className="card" aria-labelledby="inbox-title">
-          <h2 id="inbox-title" className="card-title">Approval inbox</h2>
-          <span className="badge badge-info">Unavailable</span>
-          <p className="muted">
-            Approvals are not built yet (Prompt 15). Nothing here can approve or execute an action.
-          </p>
-        </section>
-
         <section className="card" aria-labelledby="history-title">
           <div className="card-head">
-            <h2 id="history-title" className="card-title">Activity history</h2>
+            <h2 id="history-title" className="section-title">Activity history</h2>
             {status === "ready" && (
               <button type="button" className="btn btn-ghost btn-small" onClick={() => load(null)}>Refresh</button>
             )}
           </div>
           <p className="muted small">
-            Append-only record for {active?.business_name}. Times in {timezone ?? "your local time"}. Account numbers
+            Append-only record for {businessName}. Times in {timezone ?? "your local time"}. Account numbers
             and document content are redacted before storage.
           </p>
 
@@ -266,7 +372,5 @@ export function AuditPage() {
             <button type="button" className="btn btn-ghost" onClick={() => load(next)}>Load older events</button>
           )}
         </section>
-      </div>
-    </>
   );
 }

@@ -57,6 +57,12 @@ ROLE_MATRIX: dict[str, frozenset[str]] = {
     # Document register (owner ID, trade licence, ...): bookkeepers may see the entries; only the owner records or voids them.
     "documents.read": frozenset({"owner", "bookkeeper"}),
     "documents.write": frozenset({"owner"}),
+    # Approved Action Workflow: see the approval inbox / propose an exact T2 or T3 action (or withdraw your own) /
+    # approve or reject it / re-check it and mark it executable. Staff take no part; nothing here executes an action.
+    "approvals.read": frozenset({"owner", "bookkeeper"}),
+    "approvals.propose": frozenset({"owner", "bookkeeper"}),
+    "approvals.decide": frozenset({"owner"}),
+    "approvals.release": frozenset({"owner"}),
     # Read the business's audit history.
     "audit.read": frozenset({"owner", "bookkeeper"}),
 }

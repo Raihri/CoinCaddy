@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { ROLE_LABELS, useSession } from "../auth/session";
 import { DESTINATIONS } from "./navigation";
+import { NavIcon } from "./NavIcon";
 
 function initials(name: string): string {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join("") || "?";
@@ -31,7 +32,7 @@ export function AppShell() {
           <ul className="nav-list">
             <li>
               <NavLink to="/" end className="nav-item">
-                <span className="nav-mono" aria-hidden="true">SY</span>
+                <NavIcon name="status" />
                 <span className="nav-label">System status</span>
               </NavLink>
             </li>
@@ -42,7 +43,7 @@ export function AppShell() {
                   className={`nav-item ${d.available ? "" : "is-unavailable"}`}
                   aria-description={d.available ? undefined : "Unavailable: not built yet"}
                 >
-                  <span className="nav-mono" aria-hidden="true">{d.monogram}</span>
+                  <NavIcon name={d.icon} />
                   <span className="nav-label">{d.label}</span>
                   {!d.available && <span className="nav-soon">Not built</span>}
                 </NavLink>
@@ -53,11 +54,11 @@ export function AppShell() {
 
         <div className="sidebar-footer">
           <NavLink to="/business-settings" className="nav-item">
-            <span className="nav-mono" aria-hidden="true">BS</span>
+            <NavIcon name="settings" />
             <span className="nav-label">Business settings</span>
           </NavLink>
           <NavLink to="/users-roles" className="nav-item">
-            <span className="nav-mono" aria-hidden="true">UR</span>
+            <NavIcon name="users" />
             <span className="nav-label">Users &amp; roles</span>
           </NavLink>
           <div className="profile">

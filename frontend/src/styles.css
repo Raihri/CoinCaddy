@@ -71,6 +71,14 @@ body {
   background: var(--surface-muted); font-size: 11px; font-weight: 600; letter-spacing: 0;
 }
 .nav-item.active .nav-mono { background: var(--primary); color: #fff; }
+/* Sidebar icon tile: secondary grey at rest; on the active item the icon takes the primary colour (design.md §5). */
+.nav-icon {
+  width: 32px; height: 32px; flex: none; border-radius: 8px; display: grid; place-items: center;
+  background: var(--surface-muted); color: var(--text-secondary);
+}
+.nav-icon svg { display: block; }
+.nav-item:hover .nav-icon { color: var(--text-primary); }
+.nav-item.active .nav-icon { background: var(--surface); color: var(--primary); }
 .nav-label { flex: 1; }
 .nav-soon {
   font-size: 10px; font-weight: 500; padding: 2px 6px; border-radius: 16px;
@@ -459,3 +467,50 @@ a.chip { color: var(--primary); }
 .ready-subtitle { margin: 4px 0 0; font-size: 14px; font-weight: 600; letter-spacing: var(--tight); }
 .ready-steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 13px; overflow-wrap: anywhere; }
 @media (max-width: 1100px) { .funding-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; } }
+
+/* Approved Action Workflow (images/08-approvals-and-audit.png) */
+.approvals-grid { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 3fr); gap: 24px; align-items: start; }
+.approvals-col { display: grid; gap: 24px; min-width: 0; }
+.inbox-card { display: grid; gap: 16px; min-width: 0; }
+.inbox-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
+.inbox-item { display: flex; gap: 16px; align-items: flex-start; background: var(--surface-muted); border: 1px solid transparent; border-radius: 12px; padding: 16px 20px; min-width: 0; }
+.inbox-item.is-selected { border-color: var(--primary); }
+.inbox-body { min-width: 0; flex: 1; display: grid; gap: 6px; }
+.inbox-title { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -0.04em; line-height: 1.4; overflow-wrap: anywhere; }
+.inbox-sub { margin: 0; color: var(--text-secondary); font-size: 13px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.inbox-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; margin-top: 2px; }
+.inbox-status { font-size: 12px; font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
+.btn-review { flex: none; margin-left: auto; padding: 6px 24px; }
+.inbox-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.tier-chip { flex: none; display: inline-grid; place-items: center; min-width: 38px; height: 26px; padding: 0 8px; border-radius: 16px; font-size: 12px; font-weight: 600; letter-spacing: 0; }
+.tier-T2 { background: var(--warning-soft); color: var(--warning); }
+.tier-T3 { background: var(--danger-soft); color: var(--danger); }
+.text-warning { color: var(--warning); }
+.text-info { color: var(--info); }
+.text-success { color: var(--success); }
+.text-muted { color: var(--text-secondary); }
+.review-card { display: grid; gap: 16px; min-width: 0; }
+.review-heading { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.review-heading .section-title { overflow-wrap: anywhere; min-width: 0; }
+.review-state { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; }
+.review-columns { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 24px; align-items: start; }
+.review-columns > div { display: grid; gap: 10px; min-width: 0; align-content: start; }
+.review-facts { grid-template-columns: minmax(0, 1fr); gap: 10px; margin: 0; }
+.review-facts > div { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.review-facts dd { margin: 0; font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.hash { font-size: 12px; overflow-wrap: anywhere; word-break: break-all; color: var(--text-secondary); }
+.payload-json { margin: 8px 0 0; padding: 12px; background: var(--surface-muted); border-radius: 8px; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 320px; overflow-y: auto; }
+.release-checks { gap: 6px; }
+.release-line { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.release-checks .ready-finding { margin: 2px 0 0; color: var(--text-secondary); }
+.decide-form { max-width: 640px; }
+.check-line { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; overflow-wrap: anywhere; }
+.check-line input { margin-top: 3px; flex: none; }
+.decide-form textarea, .stack-form textarea { font: inherit; width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; resize: vertical; }
+@media (max-width: 1100px) { .approvals-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; } .approvals-col { gap: 16px; } }
+@media (max-width: 900px) { .review-columns { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 600px) {
+  .inbox-item { padding: 14px; gap: 12px; }
+  .review-facts > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .btn-review { width: 100%; }
+}

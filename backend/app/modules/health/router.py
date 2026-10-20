@@ -11,7 +11,7 @@ from app.db import get_engine
 router = APIRouter(prefix="/api/health", tags=["health"])
 
 # The Alembic revision this build of the API expects. Bump together with new migrations.
-EXPECTED_SCHEMA_REVISION = "0014_financing_readiness"
+EXPECTED_SCHEMA_REVISION = "0015_approval_workflow"
 
 
 @router.get("/live")

@@ -1,16 +1,10 @@
-# LedgerLift — Technical Documentation
-
-**Competition:** International Track, Topic E — SME finance copilot
-**Version:** 2.0 · **Assessment date:** 20 October 2026
-**Status:** Implementation-based technical description
-**Repository:** `Raihri/sme_copilot`
-**Evidence checked:** application source, database migrations, backend tests, and frontend production build in this repository.
+# CoinCaddy: Technical Documentation
 
 ## 1. Purpose and boundaries
 
-LedgerLift helps a small-business owner understand recorded cash, review upcoming obligations, model a proposed payment, and compare illustrative financing options. It brings statement imports, account reconciliation, receivables/payables, cash-basis financial summaries, cash forecasts, alerts, financing matches, fraud flags, and approval workflows into one workspace.
+CoinCaddy helps a small-business owner understand recorded cash, review upcoming obligations, model a proposed payment, and compare illustrative financing options. It brings statement imports, account reconciliation, receivables/payables, cash-basis financial summaries, cash forecasts, alerts, financing matches, fraud flags, and approval workflows into one workspace.
 
-The application is a decision-support prototype. Financial Health is a cash-basis summary, not an audited profit-and-loss statement. Forecasts depend on declared and imported records. A fraud flag is a review signal, not a finding. A financing match is illustrative, not an offer or approval. The action adapters target a mock sandbox; they do not connect to a live bank, lender, or messaging provider.
+The application is a decision-support prototype. Financial Health is a cash-basis summary, not an audited profit-and-loss statement. Forecasts depend on declared and imported records. A fraud flag is a review signal, not a finding. A financing match is illustrative, not an offer or approval. The action adapters are designed to target a mock sandbox and are reported not to connect to a live bank, lender, or messaging provider. The deployed endpoint configuration has not been independently verified; the mock-only boundary is a release gate.
 
 The application supports synthetic demo data and CSV/XLSX imports. It does not currently provide a live bank feed or a production lending integration.
 
@@ -40,10 +34,10 @@ flowchart LR
 | `backend/app/modules/` | Modular monolith: identity, records, cash reconstruction, obligations, Financial Health, outlook, alerts, payment review, funding, readiness, rescue, guardian, fraud, approvals, executor, passport, region packs, chat, and audit. |
 | PostgreSQL | Financial records, business memberships, imports, frozen calculation inputs/results, approvals, and audit events. Schema changes are applied through Alembic migrations in `backend/migrations/versions/`. |
 | Private file storage | Retains uploaded originals outside public frontend assets. Location is configured by `STORAGE_DIR` or defaults to the application's private storage path. |
-| Mock-services boundary | Receives only sandbox action requests through `MOCK_SERVICES_URL`. The adapters send no bank/lender credentials and redact returned/logged information. |
+| Mock-services boundary | Designed to receive sandbox action requests through `MOCK_SERVICES_URL`. The adapters reportedly send no bank/lender credentials and redact returned/logged information. Verify the configured URL, host/path allowlist, and network egress for each deployment before release. |
 | Health routes | `/api/health/live` reports process health; `/api/health/ready` checks database/schema and mock-service boundary readiness. |
 
-The hosted project has used a Vercel frontend and Render API/database. Deployment settings are maintained by those services rather than fully described by deployment manifests in this repository; this document does not claim a fresh production health check.
+The hosted project has used a Vercel frontend and Render API/database. Deployment settings are maintained by those services rather than fully described by deployment manifests in this repository. This document does not claim a fresh production health check or independent verification of production configuration.
 
 ### Request and data flow
 
@@ -51,7 +45,7 @@ The hosted project has used a Vercel frontend and Render API/database. Deploymen
 2. Imports are parsed and normalized into a reviewable staging batch. Staged rows are not ledger facts. An owner or bookkeeper reviews the rows and posts accepted rows.
 3. Feature services load only records belonging to the authorized business. Calculations use integer minor units and currency codes.
 4. Forecasts and decision reports store calculation version, frozen inputs, inputs hash, assumptions, outputs, and source links so a saved result can be checked against its original inputs.
-5. A proposed external-style action remains a proposal until an owner approves it. Release checks approval gates; the executor checks again and sends only to a mock-service endpoint.
+5. A proposed external-style action remains a proposal until an owner approves it. Release checks approval gates; the executor checks again and is designed to send only to the configured mock-service endpoint. Confirm the deployed endpoint and egress restrictions before any demo.
 6. Important mutations, denials, and decisions append a redacted audit event to a SHA-256 linked chain.
 
 ## 3. Main modules and data
@@ -67,7 +61,7 @@ The hosted project has used a Vercel frontend and Render API/database. Deploymen
 | Funding Matches & Readiness | Locale-aware illustrative product catalogue, eligibility exclusions, repayment schedules, forecast impact, and missing-document readiness checks. |
 | Receivables Guardian & Conditional Funding | Draft reminders for verified contacts; receipt-trigger and backup-financing scenarios. Decisions remain owner-reviewed. |
 | Fraud Monitor | Rule-based suspected duplicate, unusual amount, split payment, lookalike payee, changed destination, and settlement-mismatch flags. |
-| Approvals, Executor & Funding Passport | Immutable action proposals, owner decisions, T2/T3 gates, sandbox logs, and an owner-selected disclosure packet snapshot. |
+| Approvals, Executor & Funding Passport | Payload-bound action proposals, owner decisions, T2/T3 gates, sandbox logs, and an owner-selected disclosure packet snapshot. |
 | Finance Chat | Routes a question to one existing read-only calculation/report. The chat has no ledger, approval, payment, or sharing tools. |
 | Region Packs | Currency, formatting, import templates, regional catalogue selection and region-specific presentation settings. |
 
@@ -139,7 +133,7 @@ Conditional Funding replaces the planned portion of a selected invoice with an o
 
 Fraud rules compare known records and payee histories. Current rules identify likely duplicate payments, unusually large payee payments with sufficient history, clustered near-limit payments, lookalike payee names, changed bank/wallet destinations, and payment records lacking a corresponding settlement movement after configured delays. Rules produce evidence-backed candidates and suspected flags; a reviewer may confirm, clear, or defer with an explanation. These rules can produce false positives and cannot prove intent.
 
-For supported actions (invoice reminder, supplier payment, financing application, and Funding Passport share), the workflow stores an exact proposal payload and hash. It binds business, action kind, tier, proposer, policy version, expiry, and payload. Approval, release, and execution re-check the relevant conditions. The executor uses a fixed adapter whose only network target is the configured mock-services boundary and sends an idempotency key. Execution logs retain redacted request/result summaries. No adapter connects to a real provider.
+For supported actions (invoice reminder, supplier payment, financing application, and Funding Passport share), the workflow stores an exact proposal payload and hash. These controls bind the approval to the proposal but do not make the underlying business decision infallible. It binds business, action kind, tier, proposer, policy version, expiry, and payload. Approval, release, and execution re-check the relevant conditions. The executor is designed to use a fixed adapter targeting the configured mock-services boundary and sends an idempotency key. Execution logs retain redacted request/result summaries. The project assessment reports that no adapter connects to a real provider; deployment configuration and network egress still require verification before release.
 
 ### 4.8 Finance Chat
 
@@ -151,7 +145,7 @@ A deterministic planner maps a question to at most one read-only tool: Financial
 - Authorization is server-side and deny-by-default. Every business route uses a required action. Business membership and role are resolved on the server; a user outside a business receives a not-found response. UI hiding is only presentation, not enforcement.
 - Request models reject unexpected fields on sensitive workflows and validate amounts, dates, channels, destinations, IDs, and text. CORS origins are configuration-based; methods are limited to GET/POST/PATCH. Upload request size is bounded before multipart handling.
 - Imported file parsing enforces the limits listed above and rejects formulas/macros/encrypted or suspicious workbook content. Staging separates untrusted data from posted ledger records.
-- Proposal approval is bound to an immutable payload digest and expiry. T2 reminders require explicit owner approval. T3 supplier payments, application submissions, and packet shares require owner approval, password re-authentication, documented verification, and a second reviewer different from the proposer. Owner-only release and sandbox execution perform freshness/hold checks.
+- Proposal approval is bound to a payload digest and expiry; this is application-level integrity checking, not a claim that the database or proposal history is immutable against a privileged administrator. T2 reminders require explicit owner approval. T3 supplier payments, application submissions, and packet shares require owner approval, password re-authentication, documented verification, and a second reviewer different from the proposer. Owner-only release and sandbox execution perform freshness/hold checks.
 - Payee account identifiers are not retained as plaintext by the destination registry; the app stores a keyed HMAC and last four digits. Sandbox requests and audit details are redacted. Reminder message content is hashed and length-recorded rather than written to execution logs.
 - Audit events include actor, role, action, outcome, target, and redacted details. A serialized append computes a SHA-256 chain. The verifier detects changes to existing chain contents; this is tamper-evident, not immutable against a database administrator who can rewrite the whole chain.
 - No configured Postgres row-level security policy was found. Tenant isolation currently depends on authenticated business context and business-scoped SQL queries; this requires continued cross-business authorization testing.
@@ -169,13 +163,34 @@ Verified locally on 20 October 2026:
 
 The test suite contains focused coverage for authorization, record imports, cash reconstruction, obligations, Financial Health, outlook, alerts, Payment Review, funding, fraud, approval workflow, sandbox executor, audit, Funding Passport, chat, region packs, and conditional funding. See `backend/tests/`.
 
-These results establish that the included automated tests and build passed at the time above. They are not a penetration test, independent security audit, external integration test, or evidence that a deployed instance is currently healthy. The audit chain verifier is available as `cd backend && .venv/bin/python -m app.modules.audit.verify`; it requires a configured database and was not run as part of the checks above.
+These results establish that the included automated tests and build passed at the time above. They are not a penetration test, independent security audit, dependency vulnerability scan, external integration test, or evidence that a deployed instance is currently healthy. The audit chain verifier is available as `cd backend && .venv/bin/python -m app.modules.audit.verify`; it requires a configured database and was not run as part of the checks above. The verifier does not provide independent immutability against an administrator able to rewrite the database and recompute the chain.
 
-## 7. Local run and demo boundary
+## 7. Security status, known gaps, and release gates
 
-Follow the current [README.md](README.md) and `.env.example` for local setup. Run migrations with Alembic before starting the API. Use synthetic fixtures and the mock-services process for a demo. Passwordless quick login is controlled by `DEMO_QUICK_LOGIN_ENABLED` and defaults off in application settings; if enabled, it must select only users marked synthetic. Do not load real customer records into the public demo environment.
+The following items are not represented as completed fixes. They are required verification or remediation tasks based on the current assessment:
 
-## 8. Repository references
+| Priority | Gap / risk | Required action before the relevant release |
+| --- | --- | --- |
+| **P0 — demo release gate** | The deployed `MOCK_SERVICES_URL`, demo quick-login, TLS, CORS, and network egress have not been independently verified. | Validate environment settings; allowlist mock-service hosts and paths; fail closed on invalid targets; restrict egress; prove no action can reach a live provider. Keep quick login limited to synthetic users. |
+| **P0 — data isolation gate** | Tenant isolation relies on business-scoped application queries; PostgreSQL RLS is not configured. | Review every tenant-owned query, export, nested resource, chat tool, and background task. Test cross-business reads and writes. Consider RLS as defense in depth after testing tenant context. |
+| **P1 — before real financial data** | No MFA at sign-in; session/account compromise remains a risk. | Add MFA for owners and privileged accounts, login rate limiting, suspicious-login monitoring, and tested session/device revocation. |
+| **P1 — before real file uploads** | Malware scanning is not evidenced. Structural file validation does not prove a file is harmless. | Add malware scanning, isolated parsing, dependency patching, and hostile-file tests. |
+| **P1 — before production** | No independent penetration test or dependency vulnerability scan is supplied. | Commission independent testing, run dependency and license scans, triage findings, and document remediation. |
+| **P1 — before production** | Audit events are hash-linked in the same database; a privileged database operator could rewrite and re-hash the chain. | Export signed checkpoints/events to independently controlled immutable storage and alert on verification failures. |
+| **P1 — before production** | Production secrets, encryption-at-rest, backup restoration, retention, and infrastructure permissions are not independently verified. | Review secret rotation, encryption, least privilege, retention/deletion, backup access, and perform a restore test. |
+| **P1 — before enabling AI with real data** | Optional model calls may process user questions and derived financial facts through a third-party provider. | Keep template mode for public demos. Before enabling real data, document provider, fields sent, purpose, retention, residency, access, contractual terms, and user notice. |
+| **P1 — before fraud-effectiveness claims** | Fraud rules are heuristics; false-positive/false-negative rates and adversarial robustness are not independently validated. | Evaluate representative and adversarial cases, define thresholds and human review, and avoid claiming fraud certainty. |
+| **P2 — policy decision** | T2 reminder release does not require a second reviewer under the current policy. | Document why single-reviewer release is proportionate for a mock reminder. Reassess before any live messaging or higher-impact action. |
+
+P0 means a release-blocking gate for the stated deployment; P1 means high-priority work before real financial data or live integrations; P2 means a policy decision or hardening task. These are recommended priorities, not findings that a vulnerability has been exploited.
+
+**Current release posture:** conditionally suitable for a synthetic-data competition demonstration only after the deployment configuration and mock-only boundary are verified. Not assessed as production-ready for real financial data or live action execution.
+
+## 8. Local run and demo boundary
+
+Follow the current [README.md](README.md) and `.env.example` for local setup. Run migrations with Alembic before starting the API. Use synthetic fixtures and the mock-services process for a demo. Passwordless quick login is controlled by `DEMO_QUICK_LOGIN_ENABLED` and is reported to default off in application settings; if enabled, it must select only users marked synthetic. Verify this setting in the actual deployment. Do not load real customer records into the public demo environment.
+
+## 9. Repository references
 
 - API and module registration: `backend/app/main.py`
 - Identity and role policy: `backend/app/modules/identity/`

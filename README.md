@@ -1,10 +1,10 @@
-# CoinCaddy — LedgerLift SME Finance Copilot
+# CoinCaddy : SME Finance Copilot
 
-**LedgerLift** is a finance copilot concept for small businesses. It brings records, cash position, forecasts, receivables, payment review, fraud signals, and financing readiness into one explainable workspace. Recommendations link back to source records; financial actions stay behind role permissions, approvals, and sandbox controls.
+**CoinCaddy** is a finance copilot concept for small businesses. It brings records, cash position, forecasts, receivables, payment review, fraud signals, and financing readiness into one explainable workspace. Recommendations link back to source records; financial actions stay behind role permissions, approvals, and sandbox controls.
 
 > This is a student prototype for demonstration. It uses synthetic data and mock integrations. It is not a bank connection, lender decision, audited accounting system, or production payment service.
 
-## Try the live demo
+## Live Execution Evidence
 
 - **Live app:** [https://coincaddy.vercel.app](https://coincaddy.vercel.app)
 - **GitHub:** [Raihri/CoinCaddy](https://github.com/Raihri/CoinCaddy)

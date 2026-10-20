@@ -1,75 +1,136 @@
-# SME Finance Copilot — project package
+# CoinCaddy — LedgerLift SME Finance Copilot
 
-This repository contains the LedgerLift SME finance copilot implementation, product and architecture documentation, build history, security self-assessment, test fixtures, and screenshots captured from the deployed app.
+**LedgerLift** is a finance copilot concept for small businesses. It brings records, cash position, forecasts, receivables, payment review, fraud signals, and financing readiness into one explainable workspace. Recommendations link back to source records; financial actions stay behind role permissions, approvals, and sandbox controls.
 
-## Documents
+> This is a student prototype for demonstration. It uses synthetic data and mock integrations. It is not a bank connection, lender decision, audited accounting system, or production payment service.
 
-| File | Purpose |
+## Try the live demo
+
+- **Live app:** [https://coincaddy.vercel.app](https://coincaddy.vercel.app)
+- **GitHub:** [Raihri/CoinCaddy](https://github.com/Raihri/CoinCaddy)
+- **Previous live address:** [sme-copilot-ebon.vercel.app](https://sme-copilot-ebon.vercel.app) (kept as an alternate domain)
+
+Choose a synthetic demo profile to enter the sandbox. Amina Rahman is the owner profile for Northstar Trading; Bilal Hossain is the bookkeeper; Chaya Das is staff. Role permissions apply to each profile.
+
+The **hosted** Northstar demo is pre-populated with synthetic transactions, invoices, bills, balance anchors, a cash restriction, a matched account transfer, a saved cash forecast, a payment review, and fraud-monitor examples. You can explore these screens without entering records manually. Some actions intentionally remain blocked until a user with the right role approves them. The local seed command below creates the demo businesses, accounts, and users; it does not copy the hosted transaction history into your local database.
+
+## Product features
+
+- **Records and reconciliation:** Import/review transactions, inspect statement coverage and balance anchors, reconcile transfers, track account restrictions, and calculate spendable cash from verified evidence.
+- **Financial Health:** Review categorized operating receipts and payments, net cash, margin, customer dues, and linked source records.
+- **Cash Outlook:** Compare expected and cautious cash paths over 30 days and 13 weeks, check reserve breaches, and verify a saved calculation against its inputs.
+- **Payment Review:** Test a proposed payment against four cash scenarios and a reserve floor; save the assumptions and supporting records.
+- **Financing readiness:** Compare synthetic funding products, see eligibility conditions, and prepare an owner-reviewed application packet preview.
+- **Conditional Funding:** Explore a plan only when product eligibility and evidence checks allow it.
+- **Receivables Guardian:** Review overdue invoices and draft reminders. Sending is gated by verified contact details, role permissions, and approval controls.
+- **Fraud Monitor:** Review rule-based signals such as duplicate-like transactions, unusual outflows, split payments, and lookalike payees. Alerts are leads for human review, not fraud determinations.
+- **Finance Chat and audit:** Ask questions grounded in saved calculations; review proposals, approvals, blocked actions, and sandbox outcomes.
+
+## Current demo screenshots
+
+Captured from the deployed app on 20 October 2026. All business and transaction data shown is synthetic.
+
+| Quick login | Overview and alerts |
 | --- | --- |
-| [prd.md](prd.md) | Users, product scope, requirements, journeys, acceptance criteria, and screens |
-| [architecture.md](architecture.md) | Data model, calculation and matching rules, AI boundaries, security, APIs, and tests |
-| [phases.md](phases.md) | Competition demo path and later build phases with exit gates |
-| [built_so_far.md](built_so_far.md) | What exists in this package and what remains unimplemented |
-| [feature_security_matrix.md](feature_security_matrix.md) | Every feature, innovation flag, implementation approach, and built-in security |
-| [technical_documentation.md](technical_documentation.md) | Implemented system architecture, core calculations, security design, and verification evidence |
-| [security_self_assessment.md](security_self_assessment.md) | Implemented permission tiers, control assessment, test evidence, and known risks |
+| ![Synthetic demo profile picker](ss/live-quick-login.jpg) | ![Overview with demo alerts](ss/live-overview.jpg) |
 
-## Live app screenshots
-
-These screenshots were captured from the deployed synthetic demo on 20 October 2026. The demo business currently has no posted statement transactions or verified account balances, so finance pages show empty or missing-evidence states.
-
-| Page | Screenshot |
+| Records and spendable cash | Financial Health |
 | --- | --- |
-| Overview | ![Live overview](screenshots/live-overview.jpg) |
-| Records & reconciliation | ![Live records and reconciliation](screenshots/live-records.jpg) |
-| Financial Health | ![Live Financial Health](screenshots/live-financial-health.jpg) |
-| Cash Outlook | ![Live Cash Outlook](screenshots/live-cash-outlook.jpg) |
-| Fraud Monitor | ![Live Fraud Monitor](screenshots/live-fraud-monitor.jpg) |
-| Account details | ![Live account details](screenshots/live-account-detail.jpg) |
+| ![Records page](ss/live-records.jpg) | ![Financial Health page](ss/live-financial-health.jpg) |
 
-The app uses synthetic demo identities and business data. Screenshots are illustrative captures of the current interface and can become outdated as the live app changes.
+| Cash Outlook | Fraud Monitor |
+| --- | --- |
+| ![Cash Outlook page](ss/live-cash-outlook.jpg) | ![Fraud Monitor page](ss/live-fraud-monitor.jpg) |
 
-## Run the app locally
+| Payment Review | Funding Matches |
+| --- | --- |
+| ![Payment Review page](ss/live-payment-review.jpg) | ![Funding Matches page](ss/live-funding-matches.jpg) |
 
-Requires Docker (for PostgreSQL 16), Python, and Node.js. Use synthetic demo data; the app does not connect to a live bank or lender.
+| Conditional Funding |
+| --- |
+| ![Conditional Funding page](ss/live-conditional-funding.jpg) |
+
+## Technical documentation
+
+- [System architecture](Architecture.md)
+- [Technical documentation](Technical%20documentation.md)
+- [Security self-assessment](Security%20self-assessment%20report.md)
+- [Synthetic demo users](fixtures/demo_users.json)
+- [Synthetic import files](fixtures/imports/)
+
+## Run locally
+
+### Prerequisites
+
+- Docker with Docker Compose
+- Python 3.12
+- Node.js and npm
+
+### Start the services
+
+1. Create local configuration and start PostgreSQL:
+
+   ```bash
+   cp .env.example .env
+   docker compose up -d
+   ```
+
+2. Install backend dependencies and prepare the database:
+
+   ```bash
+   cd backend
+   python -m venv .venv
+   source .venv/bin/activate       # Windows: .venv\Scripts\activate
+   pip install -r requirements.txt
+   alembic upgrade head
+   python -m app.fixtures.seed
+   ```
+
+   The quick-login profile picker is disabled by default in `.env`. To use it for a local synthetic demo, set `DEMO_QUICK_LOGIN_ENABLED=true` in `.env` before starting the API. If the API is already running, restart it after changing the setting. Keep this option limited to a local sandbox. Otherwise, sign in with a synthetic user email from `fixtures/demo_users.json` and the local `DEMO_USER_PASSWORD` value from `.env`.
+
+   To populate local transaction history, open **Records**, upload a synthetic CSV from `fixtures/imports/`, review the import, and post the accepted rows. The seed command does not import these files automatically.
+
+3. Start the mock service and API in separate terminals. Run the first command from the repository root:
+
+   ```bash
+   backend/.venv/bin/python -m uvicorn mock_services.app:app --port 8100
+   ```
+
+   Start a new terminal from the repository root, then run:
+
+   ```bash
+   cd backend
+   .venv/bin/python -m uvicorn app.main:app --port 8000
+   ```
+
+4. Start the frontend in another terminal:
+
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+   Open [http://localhost:5173](http://localhost:5173) and choose a synthetic profile.
+
+### Tests and health checks
+
+From `backend/`, activate the virtual environment and run:
 
 ```bash
-# 1. Configuration (placeholders only - never commit .env)
-cp .env.example .env
-
-# 2. Database
-docker compose up -d
-
-# 3. API: install, migrate, seed the synthetic business
-cd backend
-python -m venv .venv
-.venv/Scripts/python -m pip install -r requirements.txt      # macOS/Linux: .venv/bin/python
-.venv/Scripts/python -m alembic upgrade head
-.venv/Scripts/python -m app.fixtures.seed
-
-# 4. Start the three processes (separate terminals)
-#    from the repo root:  backend/.venv/Scripts/python -m uvicorn mock_services.app:app --port 8100
-#    from backend/:       .venv/Scripts/python -m uvicorn app.main:app --port 8000
-#    from frontend/:      npm install && npm run dev            -> http://localhost:5173
-
-# 5. Tests (from backend/). They use a separate `smecopilot_test` database, created and migrated
-#    automatically, so the demo data is never touched. Override with TEST_DATABASE_URL (name must end in _test).
-.venv/Scripts/python -m pytest -q
-
-# 6. Check the append-only audit hash chain (from backend/)
-.venv/Scripts/python -m app.modules.audit.verify
+pytest -q
+python -m app.modules.audit.verify
 ```
 
-Sign in at http://localhost:5173 with a synthetic demo user from [fixtures/demo_users.json](fixtures/demo_users.json) (`amina@northstar.example` owner, `bilal@northstar.example` bookkeeper, `chaya@northstar.example` staff, `tanvir@riverbend.example` owner of a second business). The password is `DEMO_USER_PASSWORD` from `.env`. Passwordless quick login is disabled by default and, when enabled, only accepts synthetic demo users. Re-running the seed restores demo roles.
+The test suite creates and migrates a separate database named after the development database with `_test` appended (for example, `smecopilot_test`). It refuses a test database name that does not end in `_test`; you can override it with `TEST_DATABASE_URL`. Tests do not use or reset the demo database. Health checks are available at `/api/health/live` and `/api/health/ready`. The mock service health endpoint is `http://127.0.0.1:8100/health`.
 
-To try Records import, upload the synthetic statements in [fixtures/imports/](fixtures/imports/) to "Operating bank account" on the Records page. `part1` has rejected rows, an in-file duplicate, and ambiguous dates, so choose DD/MM/YYYY. `part2` overlaps already-posted rows. Original uploads are kept privately under `storage/private/` (git-ignored, never served).
-
-Health endpoints: `GET /api/health/live` (process) and `GET /api/health/ready` (database schema revision + mock-service boundary; returns 503 when degraded). The mock service exposes `GET http://127.0.0.1:8100/health`.
+## Repository layout
 
 | Path | Contents |
 | --- | --- |
-| [backend/](backend/) | FastAPI modular monolith, Alembic migrations, calculation services, and tests |
-| [mock_services/](mock_services/) | Local mock boundary for sandbox reminder, payment, application, and packet actions |
-| [frontend/](frontend/) | React/TypeScript application |
-| [fixtures/](fixtures/) | Synthetic business fixtures, hand-checked expected values, and demo import files |
-| `storage/` | Private uploaded originals (created at runtime, git-ignored) |
+| `backend/` | FastAPI application, database models, migrations, domain services, and tests |
+| `frontend/` | React, TypeScript, and Vite application |
+| `mock_services/` | Local sandbox boundary for simulated actions |
+| `fixtures/` | Synthetic users, scenario inputs, expected values, and import files |
+| `ss/` | Current screenshots from the populated live demo |
+| `storage/` | Private uploads created at runtime; excluded from Git |

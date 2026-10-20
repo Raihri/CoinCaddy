@@ -1,4 +1,4 @@
-# CoinCaddy Proposed Architecture
+# CoinCaddy: Proposed Architecture
 
 ## 1. System flow
 

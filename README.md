@@ -1,6 +1,6 @@
 # SME Finance Copilot — project package
 
-This repository contains the LedgerLift SME finance copilot implementation, product and architecture documentation, build history, security self-assessment, test fixtures, and UI mockups.
+This repository contains the LedgerLift SME finance copilot implementation, product and architecture documentation, build history, security self-assessment, test fixtures, and screenshots captured from the deployed app.
 
 ## Documents
 
@@ -14,20 +14,20 @@ This repository contains the LedgerLift SME finance copilot implementation, prod
 | [technical_documentation.md](technical_documentation.md) | Implemented system architecture, core calculations, security design, and verification evidence |
 | [security_self_assessment.md](security_self_assessment.md) | Implemented permission tiers, control assessment, test evidence, and known risks |
 
-## Mockups
+## Live app screenshots
 
-![All eight screens](images/00-sme-finance-copilot-all-pages.png)
+These screenshots were captured from the deployed synthetic demo on 20 October 2026. The demo business currently has no posted statement transactions or verified account balances, so finance pages show empty or missing-evidence states.
 
-1. [Overview](images/01-overview.png)
-2. [Records](images/02-records.png)
-3. [Financial Health](images/03-financial-health.png)
-4. [Cash Outlook](images/04-cash-outlook.png)
-5. [Payment Review](images/05-payment-review.png)
-6. [Funding Matches](images/06-funding-matches.png)
-7. [Fraud Monitor](images/07-fraud-monitor.png)
-8. [Approvals & Audit](images/08-approvals-and-audit.png)
+| Page | Screenshot |
+| --- | --- |
+| Overview | ![Live overview](screenshots/live-overview.jpg) |
+| Records & reconciliation | ![Live records and reconciliation](screenshots/live-records.jpg) |
+| Financial Health | ![Live Financial Health](screenshots/live-financial-health.jpg) |
+| Cash Outlook | ![Live Cash Outlook](screenshots/live-cash-outlook.jpg) |
+| Fraud Monitor | ![Live Fraud Monitor](screenshots/live-fraud-monitor.jpg) |
+| Account details | ![Live account details](screenshots/live-account-detail.jpg) |
 
-The screen images use illustrative synthetic BDT data. The runnable application is in `frontend/` and `backend/`; current implementation details and security limitations are documented in [technical_documentation.md](technical_documentation.md) and [security_self_assessment.md](security_self_assessment.md).
+The app uses synthetic demo identities and business data. Screenshots are illustrative captures of the current interface and can become outdated as the live app changes.
 
 ## Run the app locally
 

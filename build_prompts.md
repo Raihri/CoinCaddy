@@ -31,7 +31,7 @@ Implement only Business Setup. Use prd.md, architecture.md, feature_security_mat
 ## Prompt 04 — safe records import
 
 ```text
-Implement only Records Import from supported CSV and XLSX files, following prd.md and architecture.md. Add upload, field mapping, staged preview, row errors, possible duplicate review, and an explicit commit of selected rows to canonical transactions. Never count staged rows as official cash. Enforce file/row limits, reject formulas, macros, encrypted or ambiguous files, keep originals private, and make retry/duplicate upload idempotent. Build the Records page using images/02-records.png as a visual reference. Verify valid import, rejected row, duplicate candidate, and retry without double posting. Update built_so_far.md.
+Implement only Records Import from supported CSV and XLSX files, following prd.md and architecture.md. Add upload, field mapping, staged preview, row errors, possible duplicate review, and an explicit commit of selected rows to canonical transactions. Never count staged rows as official cash. Enforce file/row limits, reject formulas, macros, encrypted or ambiguous files, keep originals private, and make retry/duplicate upload idempotent. Use screenshots/live-records.jpg as a live layout reference; it shows the current empty synthetic-demo state. Verify valid import, rejected row, duplicate candidate, and retry without double posting. Update built_so_far.md.
 ```
 
 ## Prompt 05 — trusted cash reconstruction
@@ -49,13 +49,13 @@ Implement only the Receivables and Payables Ledger. Let authorized users enter c
 ## Prompt 07 — Financial Health
 
 ```text
-Implement only Financial Health, using images/03-financial-health.png as a visual reference. From accepted settled records, show a clearly labeled cash-basis operating summary: operating receipts, operating payments, net operating cash, categories, margin where valid, trends, customer dues, and upcoming bills. Link every number to source records or mark it unavailable. Exclude own-account transfers and financing proceeds from revenue; never let the AI calculate totals. Verify the displayed totals against the independent synthetic fixture and test cross-business isolation. Do not add forecasting or alerts. Update built_so_far.md.
+Implement only Financial Health, using screenshots/live-financial-health.jpg as a live layout reference; it shows the current empty synthetic-demo state. From accepted settled records, show a clearly labeled cash-basis operating summary: operating receipts, operating payments, net operating cash, categories, margin where valid, trends, customer dues, and upcoming bills. Link every number to source records or mark it unavailable. Exclude own-account transfers and financing proceeds from revenue; never let the AI calculate totals. Verify the displayed totals against the independent synthetic fixture and test cross-business isolation. Do not add forecasting or alerts. Update built_so_far.md.
 ```
 
 ## Prompt 08 — Cash Outlook
 
 ```text
-Implement only Cash Outlook. From a frozen, versioned input snapshot, calculate daily balances for 30 days and weekly balances through 13 weeks, with expected and cautious paths, reserve line, and clearly marked uncertain receipts. Keep accounts and currencies separate; include only outstanding obligations and avoid counting a transfer twice. Show source links, calculation version, and stale/missing evidence. Build the screen from images/04-cash-outlook.png. Check exact path values against hand-checked fixtures for on-time, late, and missing receipts. Do not create alerts or Payment Review. Update built_so_far.md.
+Implement only Cash Outlook. From a frozen, versioned input snapshot, calculate daily balances for 30 days and weekly balances through 13 weeks, with expected and cautious paths, reserve line, and clearly marked uncertain receipts. Keep accounts and currencies separate; include only outstanding obligations and avoid counting a transfer twice. Show source links, calculation version, and stale/missing evidence. Use screenshots/live-cash-outlook.jpg as a live layout reference; it shows the current missing-balance state. Check exact path values against hand-checked fixtures for on-time, late, and missing receipts. Do not create alerts or Payment Review. Update built_so_far.md.
 ```
 
 ## Prompt 09 — smart alerts
@@ -67,7 +67,7 @@ Implement only Smart Alerts on top of existing accepted data and Cash Outlook. C
 ## Prompt 10 — four-scenario Payment Review
 
 ```text
-Implement only Payment Review, using images/05-payment-review.png. The owner enters amount, date, funding account, and optional linked payable. Run four paths on one frozen snapshot: on time, receipts delayed, largest eligible receipt missed, and an owner-defined adverse case. For each path show minimum cash, first reserve breach, shortfall, assumptions, and source links. Return exactly one decision state: within reserve under stated assumptions, reserve shortfall, or more information needed. Material unknowns must block a positive result; known breaches must remain visible. Replace a linked payable event rather than double count it. Save the report; never initiate payment. Verify exact fixture results. Update built_so_far.md.
+Implement only Payment Review, using the shared responsive form and card patterns in the current frontend; no screenshot is included because the live form may contain user-entered payment values. The owner enters amount, date, funding account, and optional linked payable. Run four paths on one frozen snapshot: on time, receipts delayed, largest eligible receipt missed, and an owner-defined adverse case. For each path show minimum cash, first reserve breach, shortfall, assumptions, and source links. Return exactly one decision state: within reserve under stated assumptions, reserve shortfall, or more information needed. Material unknowns must block a positive result; known breaches must remain visible. Replace a linked payable event rather than double count it. Save the report; never initiate payment. Verify exact fixture results. Update built_so_far.md.
 ```
 
 ## Prompt 11 — decision-impact evidence queue
@@ -79,7 +79,7 @@ Implement only the Decision-Impact Evidence Queue for an existing Payment Review
 ## Prompt 12 — financing-option matching ★
 
 ```text
-Implement only Funding Matches, using images/06-funding-matches.png. Add a versioned illustrative product catalogue and hard filters for jurisdiction, currency, amount, business age/revenue, purpose, security, documents, and funding time. For eligible products, calculate fees, total repayment, repayment dates, and their effect on the existing cash forecast; rank with visible reasons. Show exclusion reasons and term source/update date. Label every result illustrative and never imply lender approval or share business data. Verify two products with different repayment effects and one excluded product. Do not build an application or Funding Passport. Update built_so_far.md.
+Implement only Funding Matches, using the shared responsive form and card patterns in the current frontend; no screenshot is included because the live form may contain user-entered funding values. Add a versioned illustrative product catalogue and hard filters for jurisdiction, currency, amount, business age/revenue, purpose, security, documents, and funding time. For eligible products, calculate fees, total repayment, repayment dates, and their effect on the existing cash forecast; rank with visible reasons. Show exclusion reasons and term source/update date. Label every result illustrative and never imply lender approval or share business data. Verify two products with different repayment effects and one excluded product. Do not build an application or Funding Passport. Update built_so_far.md.
 ```
 
 ## Prompt 13 — Cash Gap Rescue Plan ★
@@ -97,13 +97,13 @@ Implement only Financing Readiness. For a selected illustrative funding product,
 ## Prompt 15 — approval workflow
 
 ```text
-Implement only the Approved Action Workflow, using images/08-approvals-and-audit.png. Add immutable proposals with exact payload, action tier, required role, approval state, expiry, and payload hash. T2 actions need explicit owner approval; T3 actions also need owner re-authentication and documented verification. Recheck authorization and payload integrity immediately before an action can be marked executable; prevent self-approval where policy requires a second reviewer. Build the approval inbox, but do not build a sandbox executor or real payment integration. Verify staff denial, owner approval, expired approval, and tampered payload rejection. Update built_so_far.md.
+Implement only the Approved Action Workflow, using the shared responsive card and table patterns in the current frontend. Add immutable proposals with exact payload, action tier, required role, approval state, expiry, and payload hash. T2 actions need explicit owner approval; T3 actions also need owner re-authentication and documented verification. Recheck authorization and payload integrity immediately before an action can be marked executable; prevent self-approval where policy requires a second reviewer. Build the approval inbox, but do not build a sandbox executor or real payment integration. Verify staff denial, owner approval, expired approval, and tampered payload rejection. Update built_so_far.md.
 ```
 
 ## Prompt 16 — transaction fraud monitor ★
 
 ```text
-Implement only Transaction Fraud Monitor, using images/07-fraud-monitor.png. Add versioned rules for duplicate payment candidates, unusual payee amount, split payments near a limit, lookalike payees, changed destination details, and paid-without-settlement cases. A flag is suspected activity, not a fraud verdict. Show compared record IDs, rule reason, and two bounded cash outcomes for a material unresolved candidate; hold an affected proposed sandbox payment. Require independent verification before clearing a destination-change hold. Let an authorized reviewer confirm, reject, or defer with a reason, preserving originals. Verify one hit, one legitimate lookalike, the hold, and redacted audit evidence. Do not add new payment execution. Update built_so_far.md.
+Implement only Transaction Fraud Monitor, using screenshots/live-fraud-monitor.jpg as a live layout reference; it shows the current empty synthetic-demo state. Add versioned rules for duplicate payment candidates, unusual payee amount, split payments near a limit, lookalike payees, changed destination details, and paid-without-settlement cases. A flag is suspected activity, not a fraud verdict. Show compared record IDs, rule reason, and two bounded cash outcomes for a material unresolved candidate; hold an affected proposed sandbox payment. Require independent verification before clearing a destination-change hold. Let an authorized reviewer confirm, reject, or defer with a reason, preserving originals. Verify one hit, one legitimate lookalike, the hold, and redacted audit evidence. Do not add new payment execution. Update built_so_far.md.
 ```
 
 ## Prompt 17 — sandbox action executor

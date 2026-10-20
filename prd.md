@@ -62,14 +62,14 @@ The monitor flags a possible duplicate or unusual proposed payment, shows the tw
 
 | Screen | Main content | Mockup |
 | --- | --- | --- |
-| Overview | Key metrics, forecast thumbnail, priority actions | [Image](images/01-overview.png) |
-| Records | Imports, account freshness, reconciliation, review queue | [Image](images/02-records.png) |
-| Financial Health | Revenue, expenses, margin, customer dues | [Image](images/03-financial-health.png) |
-| Cash Outlook | Forecast paths, reserve line, upcoming cash movements | [Image](images/04-cash-outlook.png) |
-| Payment Review | Proposed payment, four scenarios, evidence blocker, rescue options | [Image](images/05-payment-review.png) |
-| Funding Matches | Ranked illustrative products, repayment effect, readiness, passport | [Image](images/06-funding-matches.png) |
-| Fraud Monitor | Flagged transactions, comparison evidence, review actions | [Image](images/07-fraud-monitor.png) |
-| Approvals & Audit | Tiered approvals, selective sharing, event history | [Image](images/08-approvals-and-audit.png) |
+| Overview | Key metrics, forecast thumbnail, priority actions | [Image](screenshots/live-overview.jpg) |
+| Records | Imports, account freshness, reconciliation, review queue | [Image](screenshots/live-records.jpg) |
+| Financial Health | Revenue, expenses, margin, customer dues | [Image](screenshots/live-financial-health.jpg) |
+| Cash Outlook | Forecast paths, reserve line, upcoming cash movements | [Image](screenshots/live-cash-outlook.jpg) |
+| Payment Review | Proposed payment, four scenarios, evidence blocker, rescue options | (no live screenshot included) |
+| Funding Matches | Ranked illustrative products, repayment effect, readiness, passport | (no live screenshot included) |
+| Fraud Monitor | Flagged transactions, comparison evidence, review actions | [Image](screenshots/live-fraud-monitor.jpg) |
+| Approvals & Audit | Tiered approvals, selective sharing, event history | (no live screenshot included) |
 
 ## 6. Acceptance criteria
 

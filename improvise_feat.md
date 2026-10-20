@@ -1,4 +1,70 @@
-# Proposed improvement: Import-assisted source coverage
+# SME Finance Copilot — proposed usability improvements
+
+> **Status: Feature 1 is partially implemented in the app; Features 2–3 remain proposals.** The implemented work is listed below so this file stays aligned with the product.
+
+## UX goal
+
+Help a small-business owner answer four questions on every screen: **What am I seeing? Why does it matter? What should I do next? Is this information complete?** Use plain language, show the supporting record, and keep the owner in control of financial actions.
+
+## Feature 1 — Guided money workspace
+
+### Implemented in the current app update
+
+- Grouped sidebar navigation into **Daily money**, **Plan & decide**, **Safety & approvals**, and **Ask**, with the current section opening automatically.
+- Added a three-step Records guide that distinguishes importing, reviewing/posting, and verifying balance evidence.
+- Clarified that statement upload is for bank or wallet records; invoices and bills are managed separately.
+- Renamed the Records cash summary **Spendable now** and explained that restricted funds are subtracted and stale or missing accounts are excluded. Excluded accounts link to their details.
+- Added plain-language explanations for verified, stale, missing, and needs-review account states, with an update-balance shortcut for owners and bookkeepers.
+- Explained balance anchors and source coverage next to their controls, including that coverage does not create transactions or fix an incorrect balance.
+- Clarified that unfinished Payment Review entries are saved for the current browser tab, while a dated report is only saved after running the review.
+
+### Still proposed
+
+The **Today / Next steps** panel, complete empty-state guidance across all modules, per-product eligibility improvement guidance, and broader usability testing remain backlog items.
+
+### Problem to solve
+
+The app has useful finance tools, but users can encounter terms such as *imported*, *posted*, *reconciled*, *coverage incomplete*, *stale*, and *unmatched* without a clear explanation of the difference or the next step. Important tasks are split across Records, Cash Outlook, Payment Review, Funding Matches, and Approvals.
+
+### Proposed experience
+
+| Improvement | What the user sees | Behavior |
+| --- | --- | --- |
+| **Today / Next steps panel** | A short, prioritized list such as “Review 2 duplicate rows,” “Verify the bank balance,” or “One supplier payment needs approval.” | Each item explains why it matters and links directly to the record or action. Hide completed items; do not create urgency for informational items. |
+| **Plain-language status labels** | A short label plus a one-sentence explanation and next action. Example: **Imported — saved for review; not yet included in cash figures.** | Explain statuses beside the first use and in a small “What does this mean?” help panel. Keep the precise status available for audit and technical review. |
+| **Guided import steps** | `Choose account → Review file → Resolve issues → Post records → Verify balance` with a clear current step. | Explain that importing saves a file, posting accepts selected rows into the ledger, and reconciliation checks ledger movements against balance evidence. Posting must never imply reconciliation. |
+| **Decision-ready cash numbers** | Each headline amount has an “How this is calculated” link showing included accounts, excluded stale or restricted balances, date of evidence, and supporting records. | Keep calculations server-generated. Link source rows and explain missing evidence; do not let a chat response override the calculated figure. |
+| **Useful empty states** | When a list is empty, explain what the empty state means and offer one relevant next step. | Examples: “No funding comparison yet” → **Compare options**; “No invoices yet” → **Add an invoice**. Do not show actions the user’s role cannot take. |
+| **Eligibility explanations** | Each financing option says **Eligible**, **Not eligible**, or **Needs more information**, followed by the specific criteria and how to address them. | Separate hard eligibility rules from missing records and illustrative estimates. Never imply lender approval. |
+| **Consistent action controls** | One clear primary action per panel; secondary actions are quieter; destructive, financial, and approval actions are visually distinct. | Use consistent labels, disabled-state explanations, loading feedback, and success/error messages across pages. Preserve the existing approval and sandbox requirements. |
+| **Remembered in-progress work** | If a user leaves an unfinished review form, they can return to their draft or receive a clear warning before losing it. | Persist only the minimum needed, scoped to the active business and user. Never store passwords, bank credentials, or full uploaded documents in browser storage. Clearly show when a draft was last saved. |
+
+### Acceptance checks
+
+1. A first-time user can tell the difference between **imported**, **posted**, **reconciled**, and **coverage complete** without searching a manual.
+2. Every account marked **Stale**, **Missing balance**, **Coverage incomplete**, or **Uncovered movements** explains what evidence is missing and links to the relevant account or import.
+3. Every empty module tells the user what is absent and offers one appropriate next step, where their role allows it.
+4. A financing option that is not eligible names the failed criterion; missing information is not presented as a failed criterion.
+5. Leaving an unfinished form never silently submits an action. A saved draft is clearly distinguished from a submitted, posted, approved, or executed action.
+6. Staff can see the same explanatory status information as allowed by their role, but cannot see or use owner-only controls.
+7. At a narrow mobile width, the primary task and its next action remain visible without horizontal page scrolling; tables can be scrolled within their own container.
+8. Keyboard users can reach every control, see focus, understand button names, and receive announced validation or status messages.
+
+### Usability test script
+
+Ask a new tester to complete these tasks without coaching:
+
+1. Import a statement and explain whether the rows have been posted and whether the account is reconciled.
+2. Find the reason an account is excluded from **Spendable now** and identify the next step to refresh it.
+3. Find an overdue customer invoice and explain what must happen before a reminder is sent.
+4. Find out why a funding option is not eligible and what record or condition would change that result.
+5. Review a proposed supplier payment and explain which scenario breaches the reserve and who must approve an action.
+
+Record completion, wrong turns, requests for help, and whether the tester can explain the outcome in their own words. Fix repeated points of confusion before adding more dashboard content.
+
+---
+
+## Feature 2 — Import-assisted source coverage
 
 ## Current state
 
@@ -53,7 +119,7 @@ Add this as a focused enhancement after the existing import and cash-reconstruct
 
 ---
 
-# Further improvements: Make freshness actionable
+## Feature 3 — Make balance freshness actionable
 
 The current two-day freshness rule protects **Spendable now** from relying on an old balance, but the owner needs a faster way to update the evidence and a clearer explanation of what is missing. These additions extend the import-assisted coverage feature above.
 

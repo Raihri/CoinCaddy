@@ -2,7 +2,7 @@ import { Fragment, useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { ROLE_LABELS, useSession } from "../auth/session";
 import { useRegion } from "../region/RegionContext";
-import { DESTINATIONS } from "./navigation";
+import { DESTINATIONS, NAV_GROUPS } from "./navigation";
 import { NavIcon } from "./NavIcon";
 
 function initials(name: string): string {
@@ -15,10 +15,15 @@ export function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [fraudUnresolved, setFraudUnresolved] = useState(0);
   const location = useLocation();
+  const currentNavGroup = NAV_GROUPS.find((group) => group.paths.includes(location.pathname))?.id ?? null;
+  const [openNavGroup, setOpenNavGroup] = useState<string | null>(currentNavGroup);
   const canReadFraud = active?.allowed_actions.includes("fraud.read") ?? false;
 
   // Close the mobile drawer after navigating.
   useEffect(() => setDrawerOpen(false), [location.pathname]);
+  useEffect(() => {
+    if (currentNavGroup) setOpenNavGroup(currentNavGroup);
+  }, [currentNavGroup]);
 
   useEffect(() => {
     const businessId = active?.business_id;
@@ -48,33 +53,47 @@ export function AppShell() {
           </span>
         </div>
 
-        <p className="nav-heading">Workspace</p>
         <nav>
           <ul className="nav-list">
+            <li className="nav-single-item">
+              <NavLink to="/overview" className="nav-item">
+                <NavIcon name="overview" />
+                <span className="nav-label">Overview</span>
+              </NavLink>
+            </li>
             <li>
               <NavLink to="/" end className="nav-item">
                 <NavIcon name="status" />
                 <span className="nav-label">System status</span>
               </NavLink>
             </li>
-            {DESTINATIONS.map((d) => (
-              <li key={d.path}>
-                <NavLink
-                  to={d.path}
-                  className={`nav-item ${d.available ? "" : "is-unavailable"}`}
-                  aria-description={d.available ? undefined : "Unavailable: not built yet"}
-                >
-                  <NavIcon name={d.icon} />
-                  <span className="nav-label">{d.label}</span>
-                  {d.path === "/fraud-monitor" && fraudUnresolved > 0 && (
-                    <span className="nav-alert-count" aria-label={`${fraudUnresolved} flags need review`}>
-                      <span className="nav-alert-pulse" aria-hidden="true" />{fraudUnresolved}
-                    </span>
-                  )}
-                  {!d.available && <span className="nav-soon">Not built</span>}
-                </NavLink>
-              </li>
-            ))}
+            {NAV_GROUPS.map((group) => {
+              const items = DESTINATIONS.filter((destination) => group.paths.includes(destination.path));
+              const expanded = openNavGroup === group.id;
+              return <li key={group.id} className="nav-group">
+                <button type="button" className="nav-group-toggle" aria-expanded={expanded}
+                        aria-controls={`nav-group-${group.id}`} onClick={() => setOpenNavGroup(expanded ? null : group.id)}>
+                  <span>{group.label}</span><span className="nav-group-chevron" aria-hidden="true">{expanded ? "−" : "+"}</span>
+                </button>
+                {expanded && <ul className="nav-sublist" id={`nav-group-${group.id}`}>
+                  {items.map((d) => (
+                    <li key={d.path}>
+                      <NavLink to={d.path} className={`nav-item ${d.available ? "" : "is-unavailable"}`}
+                               aria-description={d.available ? undefined : "Unavailable: not built yet"}>
+                        <NavIcon name={d.icon} />
+                        <span className="nav-label">{d.label}</span>
+                        {d.path === "/fraud-monitor" && fraudUnresolved > 0 && (
+                          <span className="nav-alert-count" aria-label={`${fraudUnresolved} flags need review`}>
+                            <span className="nav-alert-pulse" aria-hidden="true" />{fraudUnresolved}
+                          </span>
+                        )}
+                        {!d.available && <span className="nav-soon">Not built</span>}
+                      </NavLink>
+                    </li>
+                  ))}
+                </ul>}
+              </li>;
+            })}
           </ul>
         </nav>
 

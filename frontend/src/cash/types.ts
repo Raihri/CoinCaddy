@@ -47,6 +47,13 @@ export const ACCOUNT_STATUS: Record<AccountPosition["status"], [string, string]>
   needs_review: ["badge-warning", "Needs review"],
 };
 
+export const ACCOUNT_STATUS_HELP: Record<AccountPosition["status"], string> = {
+  verified: "Recent balance evidence is available. Restrictions and movements after its verified date are still accounted for.",
+  stale: "The last balance is older than the freshness limit, so it is excluded from Spendable now until updated.",
+  missing: "There is no verified balance yet, so this account is excluded from Spendable now.",
+  needs_review: "The balance needs a review. Check the reconciliation result, coverage gaps, and uncovered movements below.",
+};
+
 export const PERIOD_STATUS: Record<Period["status"], [string, string]> = {
   balanced: ["badge-success", "Balanced"],
   balanced_incomplete: ["badge-warning", "Zero residual, coverage incomplete"],

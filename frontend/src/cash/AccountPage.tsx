@@ -5,7 +5,7 @@ import { useSession } from "../auth/session";
 import { formatMoney, parseMajorToMinor } from "../money";
 import { errorFor, type FieldErrors } from "../settings/apiErrors";
 import { exponentOf, Field, KIND_LABELS } from "../settings/fields";
-import { ACCOUNT_STATUS, PERIOD_STATUS, type AccountPosition, type Position } from "./types";
+import { ACCOUNT_STATUS, ACCOUNT_STATUS_HELP, PERIOD_STATUS, type AccountPosition, type Position } from "./types";
 
 export function AccountPage() {
   const { accountId } = useParams();
@@ -55,6 +55,15 @@ export function AccountPage() {
         <Kpi label="Uncovered movements" value={money(acc.uncovered_movements.sum_minor)}
              note={`${acc.uncovered_movements.count} posted after the verified date, not included`} />
       </div>
+
+      <section className={`account-status-note ${acc.status === "stale" || acc.status === "missing" ? "is-attention" : ""}`} aria-labelledby="account-status-title">
+        <div>
+          <h2 id="account-status-title">What this means</h2>
+          <p>{ACCOUNT_STATUS_HELP[acc.status]}{acc.evidence_through ? ` Last checked ${fmtDate(acc.evidence_through)}.` : ""}</p>
+        </div>
+        {(acc.status === "stale" || acc.status === "missing") && canManage && <a className="btn btn-primary" href="#balance-anchor-form">Update balance evidence</a>}
+        {(acc.status === "stale" || acc.status === "missing") && !canManage && <span className="muted small">Ask an owner or bookkeeper to update the balance evidence.</span>}
+      </section>
 
       {acc.issues.length > 0 && (
         <section className="card" aria-labelledby="issues-title">
@@ -144,6 +153,7 @@ function AnchorsCard({ acc, base, canManage, money, exp, onChange, onVoid }: Car
   return (
     <section className="card" aria-labelledby="anchors-title">
       <h2 id="anchors-title" className="card-title">Balance anchors</h2>
+      <p className="muted small">A balance anchor is the end-of-day balance shown on a bank or wallet statement, or counted cash. Two anchors let the app compare the recorded transactions with the balance change.</p>
       <div className="table-wrap">
         <table className="table">
           <thead><tr><th>Date</th><th className="right">Balance</th><th>Source</th>{canManage && <th />}</tr></thead>
@@ -161,7 +171,7 @@ function AnchorsCard({ acc, base, canManage, money, exp, onChange, onVoid }: Car
         </table>
       </div>
       {canManage && (
-        <form className="stack-form" onSubmit={submit} noValidate aria-label="Add balance">
+        <form id="balance-anchor-form" className="stack-form" onSubmit={submit} noValidate aria-label="Add balance">
           {errors._form && <p className="badge badge-danger">{errors._form}</p>}
           <div className="form-grid">
             <Field label="Date (end of day)" error={errorFor(errors, "anchor_date")}>
@@ -211,6 +221,7 @@ function CoverageCard({ acc, base, canManage, onChange }: CardProps) {
   return (
     <section className="card" aria-labelledby="coverage-title">
       <h2 id="coverage-title" className="card-title">Source coverage</h2>
+      <p className="muted small">Confirm that you checked the statement for this date range. Coverage helps identify missing records; it does not add transactions or make an incorrect balance reconcile.</p>
       <ul className="chip-list">
         {acc.coverage.length === 0 && <li className="muted">No coverage declared.</li>}
         {acc.coverage.map((c) => <li key={c.start} className="badge badge-info">{fmtDate(c.start)} – {fmtDate(c.end)}</li>)}

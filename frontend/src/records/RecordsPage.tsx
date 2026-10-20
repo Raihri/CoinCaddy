@@ -3,7 +3,7 @@ import { RegionNote } from "../region/RegionNote";
 import { Link, useNavigate } from "react-router-dom";
 import { fmtDate } from "../api";
 import { useSession } from "../auth/session";
-import { ACCOUNT_STATUS, type Position } from "../cash/types";
+import { ACCOUNT_STATUS, ACCOUNT_STATUS_HELP, type Position } from "../cash/types";
 import { formatMoney } from "../money";
 import { readErrors } from "../settings/apiErrors";
 import { exponentOf, Field, KIND_LABELS } from "../settings/fields";
@@ -76,23 +76,34 @@ export function RecordsPage() {
       </div>
       <RegionNote />
 
+      <section className="card records-guide" aria-labelledby="records-guide-title">
+        <div className="card-head"><h2 id="records-guide-title" className="card-title">From statement to usable cash</h2><span className="badge badge-info">3 steps</span></div>
+        <ol className="records-steps">
+          <li><span className="step-number">1</span><span><strong>Import</strong><small>Upload a bank or wallet statement. Invoices and bills are added separately.</small></span></li>
+          <li><span className="step-number">2</span><span><strong>Review and post</strong><small>Resolve duplicates, check rejected rows, then post the rows you accept.</small></span></li>
+          <li><span className="step-number">3</span><span><strong>Verify</strong><small>Check balance evidence and statement coverage. Posting alone does not reconcile an account.</small></span></li>
+        </ol>
+      </section>
+
       <UploadCard accounts={profile?.accounts ?? []} />
 
       {pos && pos.totals.length > 0 && (
         <section className="card" aria-labelledby="position-title">
-          <h2 id="position-title" className="card-title">Usable cash by currency</h2>
+          <div className="card-head"><h2 id="position-title" className="card-title">Spendable now</h2><span className="badge badge-info">By currency</span></div>
+          <p className="muted small spendable-help">This total uses accounts with recent balance evidence, subtracts restricted funds, and excludes stale or missing balances. Open an account below to see the source and calculation.</p>
           <div className="currency-grid">
             {pos.totals.map((t) => (
               <div key={t.currency} className="currency-total">
-                <span className="kpi-label">Spendable now · {t.currency}</span>
+                <span className="kpi-label">{t.currency}</span>
                 <span className="kpi-value num">{money(t.spendable_minor, t.currency)}</span>
                 <span className="muted small">
                   From {t.included.length} verified account{t.included.length === 1 ? "" : "s"}, after {money(t.restricted_minor, t.currency)} restricted.
                 </span>
                 {(t.stale.length > 0 || t.missing.length > 0) && (
-                  <span className="excluded small">
-                    Not included: {[...t.stale.map((s) => `${s.label} (stale)`), ...t.missing.map((m) => `${m.label} (no balance)`)].join(", ")}
-                  </span>
+                  <div className="excluded small"><strong>Not included:</strong>
+                    {[...t.stale.map((account) => ({ ...account, reason: "stale" })), ...t.missing.map((account) => ({ ...account, reason: "no balance" }))]
+                      .map((account) => <Link key={account.account_id} to={`/records/accounts/${account.account_id}`} className="excluded-link">{account.label} ({account.reason})</Link>)}
+                  </div>
                 )}
               </div>
             ))}
@@ -102,7 +113,7 @@ export function RecordsPage() {
 
       <div className="split split-even">
         <section className="card" aria-labelledby="connected-title">
-          <h2 id="connected-title" className="card-title">Connected records</h2>
+          <h2 id="connected-title" className="card-title">Accounts and balances</h2>
           <div className="table-wrap">
             <table className="table">
               <thead><tr><th>Source</th><th>Last verified</th><th className="right">Usable</th><th>Status</th></tr></thead>
@@ -121,7 +132,8 @@ export function RecordsPage() {
                       </td>
                       <td className="nowrap">{a.evidence_through ? fmtDate(a.evidence_through) : <span className="muted">Not counted</span>}</td>
                       <td className="num right">{money(a.usable_minor, a.account.currency)}</td>
-                      <td><span className={`badge ${cls}`}>{label}</span></td>
+                      <td><span className={`badge ${cls}`} title={ACCOUNT_STATUS_HELP[a.status]}>{label}</span>
+                        <span className="muted small block status-help">{ACCOUNT_STATUS_HELP[a.status]}</span></td>
                     </tr>
                   );
                 })}
@@ -216,7 +228,7 @@ function UploadCard({ accounts }: { accounts: { id: string; label: string; curre
         <span className="nav-mono" aria-hidden="true">UP</span>
         <div>
           <h2 id="upload-title" className="card-title">Import new records</h2>
-          <p className="muted small">Upload a bank CSV/XLSX or add an invoice and bill manually.</p>
+          <p className="muted small">Upload a bank or wallet statement (CSV/XLSX). Add customer invoices and supplier bills from Invoices &amp; Bills.</p>
         </div>
       </div>
       {canStage ? (
@@ -226,10 +238,10 @@ function UploadCard({ accounts }: { accounts: { id: string; label: string; curre
               {accounts.map((a) => <option key={a.id} value={a.id}>{a.label} ({a.currency})</option>)}
             </select>
           </Field>
-          <Field label="Statement file">
+          <Field label="Statement file (CSV/XLSX)">
             <input ref={fileRef} type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
           </Field>
-          <button type="submit" className="btn btn-primary" disabled={busy || !accountId}>{busy ? "Uploading…" : "Upload records"}</button>
+          <button type="submit" className="btn btn-primary" disabled={busy || !accountId}>{busy ? "Uploading…" : "Upload statement"}</button>
           {error && <p className="badge badge-danger span-all" role="alert">{error}</p>}
         </form>
       ) : <p className="muted">Your role cannot upload records.</p>}

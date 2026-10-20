@@ -165,6 +165,7 @@ function ReviewForm({ base, payables, onSaved }: { base: string; payables: Oblig
   return (
     <form className="card form-grid" onSubmit={submit} noValidate aria-label="Proposed payment" style={{ marginBottom: 16 }}>
       <h2 className="card-title span-2">Proposed payment</h2>
+      <p className="muted small span-2">Unfinished entries are saved for this browser tab and business. Run the review to save a dated report you can reopen later.</p>
       {errors._form && <p className="badge badge-danger span-2" role="alert">{errors._form}</p>}
       <Field label="Funding account" error={errors.account_id}>
         <select value={f.account_id} onChange={(e) => { set("account_id")(e); setF((s) => ({ ...s, account_id: e.target.value, linked: "" })); }}>

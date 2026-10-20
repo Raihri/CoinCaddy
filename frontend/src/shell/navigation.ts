@@ -23,3 +23,10 @@ export const DESTINATIONS: Destination[] = [
   { path: "/fraud-monitor", label: "Fraud Monitor", icon: "fraud", available: true, plannedIn: "Prompt 16" },
   { path: "/approvals-audit", label: "Approvals & Audit", icon: "approvals", available: true, plannedIn: "Prompt 15" },
 ];
+
+export const NAV_GROUPS: { id: string; label: string; paths: string[] }[] = [
+  { id: "daily", label: "Daily money", paths: ["/records", "/financial-health", "/receivables-guardian"] },
+  { id: "planning", label: "Plan & decide", paths: ["/cash-outlook", "/payment-review", "/funding-matches", "/conditional-funding"] },
+  { id: "safety", label: "Safety & approvals", paths: ["/fraud-monitor", "/approvals-audit"] },
+  { id: "help", label: "Ask", paths: ["/finance-chat"] },
+];

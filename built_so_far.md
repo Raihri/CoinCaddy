@@ -20,7 +20,8 @@
 | 10 | Payment Review | **Done — verified locally** |
 | 11 | Decision-Impact Evidence Queue | **Done — verified locally** |
 | 12 | Funding Matches | **Done — verified locally** |
-| 13–22 | Cash Gap Rescue Plan through Region Pack | Not started |
+| 13 | Cash Gap Rescue Plan | **Done — verified locally** |
+| 14–22 | Financing Readiness through Region Pack | Not started |
 
 ## Prompt 00 — runnable foundation
 
@@ -607,6 +608,48 @@
 - Funding time assumes the application is made today. No application is made and no lender is contacted; there is no readiness view, Funding Passport, Conditional Funding Plan, or Rescue Plan in this prompt.
 - The match does not check whether the product's money covers the Cash Outlook gap, only how it changes the lowest cash. The smallest useful amount (Prompt 13) is not computed.
 
+## Prompt 13 — Cash Gap Rescue Plan
+
+### What was built
+
+| Area | What exists | Files |
+| --- | --- | --- |
+| Starting point | A rescue plan is built from **one saved Payment Review that shows a reserve shortfall**. It uses the review's own frozen forecast inputs and request, and the **unmodified Payment Review calculator** is re-run for every option, so all figures sit on the same frozen forecast. A review without a shortfall is refused | [backend/app/modules/rescue/engine.py](backend/app/modules/rescue/engine.py) |
+| Options | Each option changes one assumption on a copy of the frozen inputs:<br>• **Collect** an overdue, undisputed invoice (all or a percentage, on a date; default two days after the review). The collected amount is the owner's assumption and arrives on every scenario.<br>• **Move** a *discretionary* bill (marketing or other expense only; never rent, salaries, tax, loan repayment, or inventory), **only when a supplier permission is documented**, and no later than the documented date. The bill is still owed and falls due on the new date.<br>• **Financing**: the top eligible product (or the owner's pick) from the latest saved Funding Match, with terms recomputed from its saved catalogue and dated from the review.<br>• **Combination**: every available option together (only when at least two are available).<br>An unavailable option is listed with its reason and never simulated | same |
+| What each option shows | On the chosen scenario (default: the review's lowest-cash shortfall path): lowest cash and date, first reserve breach, **remaining shortfall**, when it takes effect, **total financing cost**, improvement over doing nothing, and **unresolved dependencies** (the customer must pay, the supplier agreement is documented but the bill is still owed, lender approval not requested, unverified declarations, and any unverified evidence in the review) | same |
+| Recommendation (a proposal) | An option qualifies only if it leaves **no shortfall**. Qualifying options are preferred by: no borrowing, fewer dependencies, lower financing cost, earlier effect, fewer actions. The reasons say why it is preferred and why the others rank lower. **No option is recommended** when none closes the gap, or when the review still has unverified material evidence (the closest option is shown as information only). No "safe amount" is calculated | same |
+| Owner adjustments | Scenario, share collected, collection date, the bill's new payment date (not beyond the documented date), the invoice, the bill, and the financing product can all be changed; each re-run is a new saved plan | [backend/app/modules/rescue/router.py](backend/app/modules/rescue/router.py) |
+| Documented permission | Alembic revision `0013_rescue_plan`: `deferral_permission` (the agreed date and where it is documented). It changes **no bill**; only owner/bookkeeper can record one (`obligations.write`), only for an outstanding discretionary bill, only later than the due date and within 90 days; a wrong one is voided (never edited or deleted). UI: a "Permission to pay later" card on a discretionary bill | [backend/migrations/versions/0013_rescue_plan.py](backend/migrations/versions/0013_rescue_plan.py), [frontend/src/obligations/ObligationDetailPage.tsx](frontend/src/obligations/ObligationDetailPage.tsx) |
+| Saved plans | `rescue_plan` stores the adjustments, frozen inputs and SHA-256, and the results; append-only. `POST/GET …/payment-reviews/{id}/rescue-plans` (new `rescue.run` and `rescue.read`: owner, bookkeeper; staff → 403), `GET …/{plan}`, `GET …/{plan}/verify`. The plan routes are GET and POST only; there is no apply, send, or approve route, and a plan never touches the ledger, an invoice, or a bill | same |
+| UI | **Rescue options** card on the Payment Review screen (for a review with a shortfall): assumption fields, the preferred option or "No safe recommendation can be made" with reasons, option cards with the mockup's tags (No borrowing, Backup funding, Needs agreement), lowest cash, still short, timing, financing cost, dependencies, and the options that were not simulated and why | [frontend/src/review/PaymentReviewPage.tsx](frontend/src/review/PaymentReviewPage.tsx) |
+
+### Evidence (run on 20 Oct 2026)
+
+- `alembic upgrade head` → `0012_funding_matches -> 0013_rescue_plan`; `/api/health/ready` expects `0013_rescue_plan`.
+- `pytest -q` → **358 passed**: 339 earlier plus 19 new in [backend/tests/test_rescue_plan.py](backend/tests/test_rescue_plan.py). Hand-worked case: bank 10,000,000, reserve 8,000,000, a 1,500,000 marketing bill due 22 Oct (supplier permission documented to 20 Nov), a 3,000,000 invoice 15 days overdue, a proposed 3,000,000 payment on 26 Oct; on the "receipts delayed" scenario the baseline is **5,500,000 on 26 Oct, 2,500,000 short**:
+  - **Collect** (3,000,000 on 22 Oct): lowest **8,500,000**, no breach, remaining 0, no borrowing, improvement 3,000,000.
+  - **Move the bill to 20 Nov:** 26 Oct lowest 7,000,000, then the bill falls due and cash reaches **5,500,000 on 20 Nov**; still 2,500,000 short (moving a bill alone does not help).
+  - **Financing** (working capital line, 2,000,000): net 1,990,000, repaid 2,059,178 on 22 Dec, cost **69,178**; lowest **5,430,822 on 22 Dec**, still 2,569,178 short.
+  - **Combination** (all three): lowest **8,430,822**, remaining 0, but it borrows.
+  - **No-borrow solution:** collect is recommended; the reasons say it does not borrow, has 1 dependency, and that the combination also closes the gap but ranks lower because it borrows.
+  - **No safe recommendation (nothing closes the gap):** with a 200,000 invoice the options leave 2,300,000, 2,500,000, 2,569,178, and 2,369,178 short; the plan says "no safe recommendation" and names the closest as information.
+  - **No safe recommendation (unverified evidence):** with a stale funding balance collect would close the gap arithmetically, yet no option is recommended until the evidence is verified.
+  - **Owner adjustments change the result:** collecting 50% leaves 1,000,000 short; collecting a day after the payment leaves 2,500,000 short; a bill date beyond the documented one is refused.
+  - **Availability and refusals:** no permission → "move" is not simulated and the bill is named; no funding match → financing is not simulated; rent is never movable; a disputed invoice cannot be collected; no overdue invoice and nothing else → "no option is available".
+  - **API, end to end:** the plan first shows the move option as unavailable; a permission is then documented (rent and receivables refused, bad dates refused, staff → 403) and the move option appears; **the ledger, bills, invoices, and payments are identical before and after a plan** (counts, sums, due dates); voiding the permission removes the option again while the older saved plan is unchanged; Verify reproduces a plan; a saved Funding Match makes the financing option appear.
+  - **Access and audit:** another business → 404 on plans, verify, and permissions; a staff refusal and the success are audited; only GET and POST routes exist and none is an action; UPDATE and DELETE on a saved plan are rejected as append-only.
+- **Browser run (throwaway test business, owner):** the Rescue options card showed "Preferred: Collect an overdue invoice … does not borrow … 1 unresolved dependency", with the combination ranked lower, the move option still ৳ 30,000.00 short, and "Backup funding: No Funding Match has been saved for this currency." as not simulated.
+- The API process that was already running predated this work and reported a schema mismatch, so I restarted it with the README command to load the new routes. `npm run build` passes.
+
+### Known gaps and risks
+
+- A "documented permission" is only a record that the owner typed (a date and a reference). Nothing verifies it with the supplier, and there is no expiry; it can only be voided.
+- Only marketing and other-expense bills count as discretionary. That list is fixed for `rescue-v1`.
+- The collected amount is treated as certain on every scenario once the owner picks a date. A customer who does not pay is shown only as a dependency, not as a failed case.
+- Financing uses the latest saved Funding Match for the currency and its amount; it does not size the loan to the gap, and repayments beyond 13 weeks are not in the figures.
+- One option per kind is simulated (the largest eligible invoice, the largest permitted bill, the top eligible product) unless the owner picks another. The combination is always "everything available".
+- No smallest-funding-amount calculation, no approval, and no execution of any option (Prompts 15 and 17).
+
 ## Not built or verified yet
 
 | Area | Current status |
@@ -617,7 +660,7 @@
 | Alerts | Built: Smart Alerts (Prompt 09), manual run only |
 | Payment Review | Built (Prompt 10): four scenarios, saved reports, never initiates payment |
 | Evidence queue | Built (Prompt 11): read-only, ranked, per saved review |
-| Rescue Plan | Not implemented (Prompt 13) |
+| Rescue Plan | Built (Prompt 13): proposals only, no ledger mutation |
 | Financing catalogue and matching | Built (Prompt 12): illustrative catalogue, filters, forecast effect, ranking |
 | Financing readiness, conditional plan, and Funding Passport | Not implemented (Prompts 14, 19, 20) |
 | Fraud rules and payment hold | Not implemented (Prompt 16) |
@@ -647,5 +690,7 @@ Deterministic alerts (reserve breach, overdue invoice, unusual outflow, repaymen
 A proposed payment can be checked in four scenarios on one frozen snapshot, with exactly one decision state (within reserve under stated assumptions, reserve shortfall, or more information needed); known breaches stay visible and material unknowns block a positive result. Reports are saved and never initiate a payment. For each saved review, a ranked queue lists the missing, stale, or disputed records that could change it, with bounded best/worst effects only where the record has an amount; it never resolves evidence or changes the decision.
 
 Illustrative financing products can be filtered by documented eligibility, costed exactly, and tested on the cash forecast, with exclusion reasons and the source and date of every term; they are labelled potential matches, never approvals.
+
+For a payment that would breach the reserve, a Rescue Plan compares collecting an overdue invoice, moving a discretionary bill (only with a documented supplier permission), an illustrative financing match, and a combination on the same frozen forecast, and recommends one only when it closes the gap; it makes proposals only.
 
 No approval workflow or lender connectivity exists yet.

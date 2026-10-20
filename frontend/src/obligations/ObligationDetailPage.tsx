@@ -90,6 +90,10 @@ export function ObligationDetailPage() {
         {canWrite && isOpen && <PaymentForm ob={ob} exp={exp} eligible={eligible} onPay={(body) => act("/allocations", body, "Payment recorded.")} />}
       </section>
 
+      {ob.direction === "payable" && isOpen && (ob.category === "marketing" || ob.category === "other_expense") && (
+        <DeferralPermissions base={base} ob={ob} canWrite={canWrite} />
+      )}
+
       {canWrite && !ob.cancelled && (
         <section className="card actions-card" aria-labelledby="manage-title">
           <h2 id="manage-title" className="card-title">Manage</h2>
@@ -149,5 +153,47 @@ function PaymentForm({ ob, exp, eligible, onPay }: { ob: Detail; exp: number; el
       {errors._form && <p className="badge badge-danger">{errors._form}</p>}
       <div className="form-actions"><button type="submit" className="btn btn-primary">Record payment</button></div>
     </form>
+  );
+}
+
+type Permission = { id: string; agreed_due_date: string; evidence_reference: string; note: string | null; created_at: string; created_by: string; voided: boolean; void_reason: string | null };
+
+// A documented agreement to pay this discretionary bill later. It changes nothing on the bill: a Rescue Plan option may only
+// "move" a bill that has one.
+function DeferralPermissions({ base, ob, canWrite }: { base: string; ob: Detail; canWrite: boolean }) {
+  const [rows, setRows] = useState<Permission[]>([]);
+  const [date, setDate] = useState("");
+  const [ref, setRef] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const load = useCallback(async () => { const r = await api<Permission[]>(`${base}/deferral-permissions`); if (r.ok) setRows(r.data); }, [base]);
+  useEffect(() => { load(); }, [load]);
+  const add = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!date || !ref.trim()) return setError("Enter the agreed date and where the agreement is documented.");
+    const r = await api<Permission>(`${base}/deferral-permissions`, "POST", { agreed_due_date: date, evidence_reference: ref });
+    if (!r.ok) return setError(r.message);
+    setError(null); setDate(""); setRef(""); load();
+  };
+  return (
+    <section className="card" style={{ marginTop: 16 }} aria-labelledby="perm-title">
+      <h2 id="perm-title" className="card-title">Permission to pay later</h2>
+      <p className="muted small">Record only a real agreement from the supplier. A Rescue Plan can propose paying this bill later only when one is documented. The bill itself is not changed (due {fmtDate(ob.due_date)}).</p>
+      {rows.length === 0 && <p className="muted">No permission is documented.</p>}
+      {rows.map((p) => (
+        <p key={p.id} className={p.voided ? "muted" : ""}>
+          Pay by <strong>{fmtDate(p.agreed_due_date)}</strong> · {p.evidence_reference} <span className="muted small">· recorded by {p.created_by}</span>
+          {p.voided && <span className="badge badge-muted"> Voided: {p.void_reason}</span>}
+          {canWrite && !p.voided && <> <VoidButton onVoid={async (reason) => { const r = await api(`${base}/deferral-permissions/${p.id}/void`, "POST", { reason }); if (r.ok) { load(); return null; } return r.message; }} /></>}
+        </p>
+      ))}
+      {canWrite && (
+        <form className="form-grid" onSubmit={add} noValidate aria-label="Document a permission">
+          {error && <p className="badge badge-danger span-2" role="alert">{error}</p>}
+          <Field label="Supplier agreed to be paid by"><input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
+          <Field label="Where it is documented" hint="For example: email from the supplier, 12 Oct."><input value={ref} maxLength={120} onChange={(e) => setRef(e.target.value)} /></Field>
+          <div className="form-actions span-2"><button type="submit" className="btn btn-primary">Document permission</button></div>
+        </form>
+      )}
+    </section>
   );
 }

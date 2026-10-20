@@ -134,6 +134,14 @@ function describe(e: AuditEvent): string {
       return `Compared financing options: ${d.eligible} eligible, ${d.excluded} excluded (illustrative, nothing applied for)`;
     case "funding.run:denied":
       return "Tried to compare financing options without permission";
+    case "rescue.run:success":
+      return `Compared rescue options: ${d.recommendation === "recommended" ? `preferred ${d.recommended}` : "no safe recommendation"} (proposals only)`;
+    case "rescue.run:denied":
+      return "Tried to run a rescue plan without permission";
+    case "obligation.deferral_permit:success":
+      return `Documented a supplier's permission to pay a bill later (${d.reference}, by ${d.agreed_due_date})`;
+    case "obligation.deferral_void:success":
+      return `Voided a documented payment-later permission: ${d.reason}`;
     case "alerts.run:success":
       return `Checked alerts: ${d.created} new, ${d.updated} changed, ${d.resolved} cleared`;
     case "alerts.run:denied":

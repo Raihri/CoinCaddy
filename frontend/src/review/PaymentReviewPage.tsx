@@ -29,6 +29,23 @@ type Report = {
   };
 };
 type Row = { id: string; decision: Decision; created_at: string; payment: { amount_minor: number; date: string; payee: string | null; account_label: string }; currency: string };
+type ReviewDraft = { account_id: string; amount: string; date: string; payee: string; linked: string; delay: string; haircut: string; extra: string; extra_date: string };
+const DRAFT_FIELDS: (keyof ReviewDraft)[] = ["account_id", "amount", "date", "payee", "linked", "delay", "haircut", "extra", "extra_date"];
+
+function readDraft(key: string, accountId: string): ReviewDraft {
+  const empty: ReviewDraft = { account_id: accountId, amount: "", date: "", payee: "", linked: "", delay: "7", haircut: "0", extra: "", extra_date: "" };
+  try {
+    const saved: unknown = JSON.parse(sessionStorage.getItem(key) ?? "null");
+    if (!saved || typeof saved !== "object" || Array.isArray(saved)) return empty;
+    const values = saved as Record<string, unknown>;
+    for (const field of DRAFT_FIELDS) {
+      if (typeof values[field] !== "string") return empty;
+    }
+    return { ...empty, ...values };
+  } catch {
+    return empty;
+  }
+}
 
 const DECISION: Record<Decision, { label: string; cls: string }> = {
   within_reserve: { label: "Within reserve under stated assumptions", cls: "badge-success" },
@@ -45,7 +62,7 @@ function sourceLink(kind: string, id: string): string | null {
 }
 
 export function PaymentReviewPage() {
-  const { active, profile, options } = useSession();
+  const { me, active, profile, options } = useSession();
   const base = active ? `/api/businesses/${active.business_id}` : "";
   const canRun = active?.allowed_actions.includes("paymentreview.run") ?? false;
   const canRead = active?.allowed_actions.includes("paymentreview.read") ?? false;
@@ -79,10 +96,12 @@ export function PaymentReviewPage() {
         </div>
       </div>
       {!canRead && <section className="card"><p className="muted">Only owners and bookkeepers can use Payment Review.</p></section>}
-      {canRead && canRun && profile && <ReviewForm base={base} payables={payables} onSaved={saved} />}
+      {canRead && canRun && active && profile?.id === active.business_id &&
+        <ReviewForm key={`${me?.user.id}:${active.business_id}`} base={base} payables={payables} onSaved={saved} />}
       {canRead && loaded && !report && <section className="card" style={{ marginTop: 16 }}><p className="muted">No payment review has been saved yet. Enter a proposed payment above.</p></section>}
       {report && <ReportView report={report} money={money} />}
       {report && <EvidenceQueue base={base} reviewId={report.id} currency={report.results.currency} money={money} />}
+      {report && report.results.paths.some((p) => p.status === "shortfall") && canRun && <RescuePlan base={base} reviewId={report.id} currency={report.results.currency} money={money} />}
       {rows.length > 1 && (
         <section className="card" style={{ marginTop: 16 }} aria-labelledby="saved-title">
           <h2 id="saved-title" className="card-title">Saved reviews</h2>
@@ -109,11 +128,15 @@ export function PaymentReviewPage() {
 }
 
 function ReviewForm({ base, payables, onSaved }: { base: string; payables: Obligation[]; onSaved: (r: Report) => void }) {
-  const { profile, options } = useSession();
+  const { me, active, profile, options } = useSession();
   const accounts = profile?.accounts ?? [];
-  const [f, setF] = useState({ account_id: accounts[0]?.id ?? "", amount: "", date: "", payee: "", linked: "", delay: "7", haircut: "0", extra: "", extra_date: "" });
+  const draftKey = `payment-review-draft:${me?.user.id}:${active?.business_id}`;
+  const [f, setF] = useState<ReviewDraft>(() => readDraft(draftKey, accounts[0]?.id ?? ""));
   const [errors, setErrors] = useState<FieldErrors>({});
   const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    try { sessionStorage.setItem(draftKey, JSON.stringify(f)); } catch { /* Private browsing may block storage. */ }
+  }, [draftKey, f]);
   const account = accounts.find((a) => a.id === f.account_id);
   const currency = account?.currency ?? "BDT";
   const exp = exponentOf(options, currency);
@@ -337,6 +360,100 @@ function EvidenceQueue({ base, reviewId, currency, money }: { base: string; revi
         })}
       </ol>
       <p className="muted small" style={{ marginTop: 12 }}>Materiality threshold {money(q.materiality_threshold_minor, currency)} (1% of the reserve). {q.note}</p>
+    </section>
+  );
+}
+
+type RAction = { kind: string; label: string; amount_minor: number; date: string; source: { kind: string; id: string }; terms?: { total_cost_minor: number } };
+type ROption = { id: string; title: string; actions: RAction[]; borrows: boolean; effect_date: string; minimum: { date: string; amount_minor: number };
+                 first_breach: { date: string } | null; remaining_shortfall_minor: number; resolves: boolean; financing_cost_minor: number; dependencies: string[];
+                 improvement_minor: number; recommended: boolean; note: string; paths_still_short: string[] };
+type RPlan = { id: string; created_at: string; created_by: string; inputs_sha256: string; results: {
+  currency: string; reserve_minor: number; target_path: string; target_label: string; notice: string;
+  baseline: { minimum: { date: string; amount_minor: number }; remaining_shortfall_minor: number; first_breach: { date: string } | null };
+  assumptions: { path: string; collect_percent: number; collect_date?: string; deferral_date?: string; financing_product_id?: string };
+  options: ROption[]; unavailable: { id: string; reason: string }[]; evidence_blockers: string[];
+  recommendation: { state: "recommended" | "none_safe"; option_id: string | null; reasons: string[] } } };
+
+const TAG: Record<string, { label: string; cls: string }> = {
+  collect: { label: "No borrowing", cls: "badge-success" }, defer: { label: "Needs agreement", cls: "badge-warning" },
+  financing: { label: "Backup funding", cls: "badge-info" }, combination: { label: "Combination", cls: "badge-muted" },
+};
+
+function RescuePlan({ base, reviewId, currency, money }: { base: string; reviewId: string; currency: string; money: (m: number, c: string) => string }) {
+  const url = `${base}/payment-reviews/${reviewId}/rescue-plans`;
+  const [plan, setPlan] = useState<RPlan | null>(null);
+  const [f, setF] = useState({ path: "", percent: "", cdate: "", ddate: "" });
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { setPlan(null); api<RPlan[]>(url).then((r) => { if (r.ok && r.data[0]) setPlan(r.data[0]); }); }, [url]);
+
+  const run = async (e?: FormEvent) => {
+    e?.preventDefault();
+    const body: Record<string, unknown> = {};
+    if (f.path) body.path = f.path;
+    if (f.percent) body.collect_percent = Number(f.percent);
+    if (f.cdate) body.collect_date = f.cdate;
+    if (f.ddate) body.deferral_date = f.ddate;
+    setBusy(true);
+    const r = await api<RPlan>(url, "POST", body);
+    setBusy(false);
+    if (!r.ok) return setError(r.message);
+    setError(null); setPlan(r.data);
+  };
+  const res = plan?.results;
+  const rec = res?.recommendation;
+  return (
+    <section className="card" style={{ marginTop: 16 }} aria-labelledby="rescue-title">
+      <h2 id="rescue-title" className="card-title">Rescue options</h2>
+      <p className="muted small">Proposals only. Each option re-runs this review's frozen forecast with one change. Nothing is changed in your records, and nothing is sent to a customer, supplier, or lender.</p>
+      <form className="form-grid" onSubmit={run} noValidate aria-label="Rescue assumptions">
+        <Field label="Scenario to rescue" hint="Default: the scenario with the lowest cash.">
+          <select value={f.path} onChange={(e) => setF({ ...f, path: e.target.value })}>
+            <option value="">Worst shortfall scenario</option>
+            {Object.entries(PATHS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+        </Field>
+        <Field label="Share of the overdue invoice collected (%)" hint="Default 100."><input inputMode="numeric" value={f.percent} onChange={(e) => setF({ ...f, percent: e.target.value })} /></Field>
+        <Field label="Collection date" hint="Default: two days after the review."><input type="date" value={f.cdate} onChange={(e) => setF({ ...f, cdate: e.target.value })} /></Field>
+        <Field label="Pay the moved bill on" hint="Default: the documented date. Not later than that."><input type="date" value={f.ddate} onChange={(e) => setF({ ...f, ddate: e.target.value })} /></Field>
+        {error && <p className="badge badge-danger span-2" role="alert">{error}</p>}
+        <div className="form-actions span-2"><button type="submit" className="btn btn-primary" disabled={busy}>{busy ? "Comparing…" : plan ? "Re-run with these assumptions" : "Compare rescue options"}</button></div>
+      </form>
+
+      {res && rec && (
+        <>
+          <div className={`alert-card ${rec.state === "recommended" ? "alert-low" : "alert-medium"}`} role="status" style={{ marginTop: 16 }}>
+            <div className="alert-title">{rec.state === "recommended" ? `Preferred: ${res.options.find((o) => o.id === rec.option_id)?.title}` : "No safe recommendation can be made"}</div>
+            <ul>{rec.reasons.map((x) => <li key={x}>{x}</li>)}</ul>
+            <p className="muted small">Scenario: {res.target_label}. Without any option the lowest cash is {money(res.baseline.minimum.amount_minor, currency)} on {fmtDate(res.baseline.minimum.date)}; the reserve is {money(res.reserve_minor, currency)}.</p>
+          </div>
+          <div className="rescue-grid">
+            {res.options.map((o) => (
+              <article key={o.id} className={`rescue-card ${o.recommended ? "is-recommended" : ""}`}>
+                <span className={`badge ${TAG[o.id].cls}`}>{o.recommended ? "Preferred · " : ""}{TAG[o.id].label}</span>
+                <h3 className="rescue-title">{o.title}</h3>
+                <ul className="small">{o.actions.map((a) => <li key={a.label}>{a.label} · {fmtDate(a.date)}</li>)}</ul>
+                <dl className="alert-facts">
+                  <div><dt>Lowest cash</dt><dd className="nowrap">{money(o.minimum.amount_minor, currency)} <span className="muted small">{fmtDate(o.minimum.date)}</span></dd></div>
+                  <div><dt>Still short</dt><dd className={`nowrap ${o.remaining_shortfall_minor ? "text-danger" : ""}`}>{o.remaining_shortfall_minor ? money(o.remaining_shortfall_minor, currency) : "None"}</dd></div>
+                  <div><dt>Takes effect</dt><dd className="nowrap">{fmtDate(o.effect_date)}</dd></div>
+                  <div><dt>Financing cost</dt><dd className="nowrap">{o.borrows ? money(o.financing_cost_minor, currency) : "None"}</dd></div>
+                </dl>
+                <p className="small">{o.resolves ? "Closes the shortfall." : o.remaining_shortfall_minor ? `Leaves ${money(o.remaining_shortfall_minor, currency)} short on this scenario.` : o.note}</p>
+                <details className="path-detail"><summary>Unresolved dependencies ({o.dependencies.length})</summary><ul>{o.dependencies.map((d) => <li key={d}>{d}</li>)}</ul></details>
+              </article>
+            ))}
+          </div>
+          {res.unavailable.length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <p className="muted small"><strong>Not simulated</strong></p>
+              <ul className="small">{res.unavailable.map((u) => <li key={u.id}><strong>{TAG[u.id]?.label ?? u.id}:</strong> {u.reason}</li>)}</ul>
+            </div>
+          )}
+          <p className="muted small" style={{ marginTop: 8 }}>Saved {new Date(plan!.created_at).toLocaleString("en-GB")} by {plan!.created_by} · inputs SHA-256 {plan!.inputs_sha256.slice(0, 12)}…</p>
+        </>
+      )}
     </section>
   );
 }

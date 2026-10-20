@@ -48,6 +48,9 @@ ROLE_MATRIX: dict[str, frozenset[str]] = {
     # Funding Matches: run a match (saves an illustrative result; applies to no lender) / read the catalogue and saved runs.
     "funding.run": frozenset({"owner", "bookkeeper"}),
     "funding.read": frozenset({"owner", "bookkeeper"}),
+    # Rescue plans (proposals only; nothing is changed) for a saved Payment Review.
+    "rescue.run": frozenset({"owner", "bookkeeper"}),
+    "rescue.read": frozenset({"owner", "bookkeeper"}),
     # Read the business's audit history.
     "audit.read": frozenset({"owner", "bookkeeper"}),
 }

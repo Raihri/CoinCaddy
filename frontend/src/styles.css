@@ -422,3 +422,10 @@ a.chip { color: var(--primary); }
 .checks { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 6px 0; }
 .checks label { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; }
 .text-danger { color: var(--danger); }
+
+/* Rescue options (layout: images/05-payment-review.png) */
+.rescue-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 12px; }
+.rescue-card { background: var(--surface-muted); border-radius: 12px; padding: 16px; border: 1px solid transparent; min-width: 0; }
+.rescue-card.is-recommended { border-color: var(--success); background: var(--success-soft); }
+.rescue-card ul { margin: 6px 0; padding-left: 18px; }
+.rescue-title { margin: 8px 0 4px; font-size: 16px; font-weight: 600; letter-spacing: var(--tight); }

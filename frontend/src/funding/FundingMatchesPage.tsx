@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { RegionNote } from "../region/RegionNote";
 import { api, fmtDate } from "../api";
 import { useSession } from "../auth/session";
 import { formatMoney, parseMajorToMinor } from "../money";
@@ -69,6 +70,7 @@ export function FundingMatchesPage() {
           <p className="page-sub">Compare financing by eligibility, true cost, and repayment fit. Sample terms only: nothing is applied for or shared.</p>
         </div>
       </div>
+      <RegionNote catalogue />
       {!canRead && <section className="card"><p className="muted">Only owners and bookkeepers can use Funding Matches.</p></section>}
       {canRead && canRun && cat && <NeedForm base={base} cat={cat} onSaved={(r) => { setRun(r); load(); }} />}
       {canRead && loaded && !run && <section className="card" style={{ marginTop: 16 }}><p className="muted">No funding comparison has been saved yet. Describe the funding need above.</p></section>}

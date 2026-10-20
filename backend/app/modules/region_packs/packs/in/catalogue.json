@@ -1,0 +1,48 @@
+{
+  "version": "catalogue-in-2026.10",
+  "label": "Illustrative financing catalogue for India (sample terms for a prototype)",
+  "updated": "2026-10-01",
+  "source": "Written for this prototype. Not taken from any real lender, not a quote, and not verified with any lender.",
+  "products": [
+    {
+      "id": "in-working-capital-line", "name": "Working capital line", "kind": "credit_line", "provider": "Illustrative lender IN-A",
+      "jurisdictions": ["IN"], "currencies": ["INR"], "min_amount_minor": 10000000, "max_amount_minor": 250000000,
+      "min_months_trading": 6, "min_monthly_revenue_minor": 30000000,
+      "purposes": ["working_capital", "inventory", "invoice_gap"], "security": "none",
+      "documents": ["bank_statements", "id"], "funding_days": 3,
+      "pricing": {"processing_fee_bps": 100, "interest_annual_bps": 2100, "tenor_days": 60},
+      "repayment": "Single repayment of principal plus interest at the end of the term",
+      "source": {"label": "Illustrative sample terms", "updated": "2026-10-01"}
+    },
+    {
+      "id": "in-invoice-advance", "name": "Invoice advance", "kind": "invoice_advance", "provider": "Illustrative lender IN-B",
+      "jurisdictions": ["IN"], "currencies": ["INR"], "min_amount_minor": 5000000, "max_amount_minor": 150000000,
+      "min_months_trading": 3, "min_monthly_revenue_minor": 20000000,
+      "purposes": ["invoice_gap", "working_capital"], "security": "receivables", "advance_rate_bps": 7500,
+      "documents": ["invoices", "id"], "funding_days": 2,
+      "pricing": {"processing_fee_bps": 0, "fee_per_30_days_bps": 120, "tenor_days": 45},
+      "repayment": "Single repayment of the advance plus a fee for each 30 days (part periods count in full)",
+      "source": {"label": "Illustrative sample terms", "updated": "2026-10-01"}
+    },
+    {
+      "id": "in-term-loan", "name": "Term loan", "kind": "term_loan", "provider": "Illustrative lender IN-C",
+      "jurisdictions": ["IN"], "currencies": ["INR"], "min_amount_minor": 20000000, "max_amount_minor": 500000000,
+      "min_months_trading": 12, "min_monthly_revenue_minor": 50000000,
+      "purposes": ["working_capital", "equipment", "inventory"], "security": "guarantor",
+      "documents": ["bank_statements", "id", "tax_certificate"], "funding_days": 7,
+      "pricing": {"processing_fee_bps": 0, "interest_annual_bps": 1300, "installments": 6},
+      "repayment": "Equal monthly installments of principal plus flat-rate interest",
+      "source": {"label": "Illustrative sample terms", "updated": "2026-10-01"}
+    },
+    {
+      "id": "in-wallet-micro-loan", "name": "Wallet micro-loan", "kind": "credit_line", "provider": "Illustrative lender IN-D",
+      "jurisdictions": ["IN"], "currencies": ["INR"], "min_amount_minor": 1000000, "max_amount_minor": 30000000,
+      "min_months_trading": 3, "min_monthly_revenue_minor": 5000000,
+      "purposes": ["working_capital", "inventory"], "security": "none",
+      "documents": ["wallet_history", "id"], "funding_days": 1,
+      "pricing": {"processing_fee_bps": 200, "interest_annual_bps": 3000, "tenor_days": 30},
+      "repayment": "Single repayment of principal plus interest after 30 days",
+      "source": {"label": "Illustrative sample terms", "updated": "2026-10-01"}
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { RegionNote } from "../region/RegionNote";
 import { Link } from "react-router-dom";
 import { api, fmtDate } from "../api";
 import { useSession } from "../auth/session";
@@ -67,12 +68,15 @@ export function CashOutlookPage() {
   };
 
   const header = (
-    <div className="page-header">
-      <div>
-        <h1 className="page-title">Cash outlook</h1>
-        <p className="page-sub">See when cash may be tight and which assumptions drive the forecast</p>
+    <>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Cash outlook</h1>
+          <p className="page-sub">See when cash may be tight and which assumptions drive the forecast</p>
+        </div>
       </div>
-    </div>
+      <RegionNote />
+    </>
   );
   if (state === "loading") return <>{header}<p className="muted">Loading…</p></>;
   if (state === "none" || !snap) return (

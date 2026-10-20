@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { RegionNote } from "../region/RegionNote";
 import { Link, useNavigate } from "react-router-dom";
 import { fmtDate } from "../api";
 import { useSession } from "../auth/session";
@@ -73,6 +74,7 @@ export function RecordsPage() {
           <Link to="/records/transfers" className="btn btn-ghost">Transfers</Link>
         </div>
       </div>
+      <RegionNote />
 
       <UploadCard accounts={profile?.accounts ?? []} />
 

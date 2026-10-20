@@ -1,3 +1,4 @@
+import { formatDate } from "./region/format";
 import { readErrors, type FieldErrors } from "./settings/apiErrors";
 
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; status: number; errors: FieldErrors; message: string };
@@ -16,7 +17,7 @@ export async function api<T>(url: string, method = "GET", body?: unknown): Promi
 
 export function fmtDate(iso: string | null | undefined): string {
   if (!iso) return "—";
-  return new Date(iso + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  return formatDate(iso);
 }
 
 export function todayIso(): string {

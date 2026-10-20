@@ -189,7 +189,7 @@ def match(inputs: dict, catalogue: dict, req: dict) -> dict:
             f"Typically funds in {x['funding_days']} day(s); needed by {req['needed_by']}.",
         ]
     return {"calc_version": CALC_VERSION, "catalogue_version": catalogue["version"], "catalogue_updated": catalogue["updated"],
-            "catalogue_source": catalogue["source"], "as_of": inputs["as_of"], "currency": cur, "label": LABEL, "notice": NOTICE,
+            "catalogue_source": catalogue["source"], "region_pack": catalogue.get("region_pack"), "as_of": inputs["as_of"], "currency": cur, "label": LABEL, "notice": NOTICE,
             "lender_approval": False, "data_shared": False, "baseline": baseline,
             "need": {"amount_minor": req["amount_minor"], "needed_by": req["needed_by"], "purpose": req["purpose"],
                      "receiving_account_id": req["receiving_account_id"]},

@@ -1,0 +1,40 @@
+{
+  "id": "bd",
+  "version": "region-bd-2026.10",
+  "name": "Bangladesh",
+  "jurisdiction": "BD",
+  "currency": "BDT",
+  "minor_unit_exponent": 2,
+  "language": "en-BD",
+  "number_format": {"grouping": "lakh", "group_separator": ",", "decimal_separator": "."},
+  "currency_display": {"symbol": "৳", "position": "prefix"},
+  "date_display": "DD MMM YYYY",
+  "labels": {
+    "cash": "Cash on hand",
+    "receivables": "Customer dues",
+    "payables": "Supplier bills",
+    "mobile_wallet": "Mobile wallet (bKash/Nagad-style)",
+    "reserve": "Cash reserve",
+    "financing": "Funding"
+  },
+  "import_templates": [
+    {
+      "id": "bd-bank-signed",
+      "name": "Bank statement, one signed amount column",
+      "description": "Date as YYYY-MM-DD, a Description column and one Amount column where negative means money out.",
+      "date_format": "YYYY-MM-DD",
+      "amount_mode": "signed",
+      "columns": {"date": "Date", "description": "Description", "amount": "Amount", "reference": "Reference"}
+    },
+    {
+      "id": "bd-wallet-debit-credit",
+      "name": "Mobile wallet statement, debit and credit columns",
+      "description": "Date as DD/MM/YYYY with separate Debit and Credit columns.",
+      "date_format": "DD/MM/YYYY",
+      "amount_mode": "debit_credit",
+      "columns": {"date": "Date", "description": "Details", "debit": "Debit", "credit": "Credit", "reference": "Transaction ID"}
+    }
+  ],
+  "catalogue_file": "catalogue.json",
+  "notice": "Illustrative sample terms and presentation settings for a prototype. Not legal, tax or regulatory advice, and not a claim of compliance in Bangladesh."
+}

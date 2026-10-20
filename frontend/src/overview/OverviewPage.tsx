@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { RegionNote } from "../region/RegionNote";
 import { Link } from "react-router-dom";
 import { api, fmtDate } from "../api";
 import { useSession } from "../auth/session";
@@ -69,6 +70,7 @@ export function OverviewPage() {
         </div>
         {canRun && <button type="button" className="btn btn-primary" onClick={run} disabled={busy}>{busy ? "Checking…" : "Check for alerts now"}</button>}
       </div>
+      <RegionNote />
 
       <section className="card" aria-labelledby="alerts-title" style={{ marginTop: 16 }}>
         <div className="card-head">

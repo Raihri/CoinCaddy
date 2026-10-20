@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { ROLE_LABELS, useSession } from "../auth/session";
+import { useRegion } from "../region/RegionContext";
 import { DESTINATIONS } from "./navigation";
 import { NavIcon } from "./NavIcon";
 
@@ -10,6 +11,7 @@ function initials(name: string): string {
 
 export function AppShell() {
   const { me, active, profile, setActiveId, signOut } = useSession();
+  const region = useRegion();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
 
@@ -105,12 +107,22 @@ export function AppShell() {
             {profile && (
               <span className="pill pill-primary">{profile.base_currency} · {profile.jurisdiction_name}</span>
             )}
+            {region.view?.active && (
+              <span className="pill pill-muted" title={`Region pack ${region.view.active.version}`}>
+                Region pack · {region.view.active.jurisdiction} · {region.view.active.version}
+              </span>
+            )}
             {active && <span className="pill pill-info">{ROLE_LABELS[active.role]}</span>}
             <span className="pill pill-warning">SANDBOX</span>
           </span>
         </header>
         <main className="content">
-          <Outlet />
+          {region.ready ? (
+            // A new pack remounts the page, so every figure is written again with the pack that is shown in the header.
+            <Fragment key={region.formatKey}><Outlet /></Fragment>
+          ) : (
+            <p className="muted">Loading…</p>
+          )}
         </main>
       </div>
     </div>

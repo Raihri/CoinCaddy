@@ -18,6 +18,7 @@ import { TransfersPage } from "./cash/TransfersPage";
 import { ObligationDetailPage } from "./obligations/ObligationDetailPage";
 import { ObligationsPage } from "./obligations/ObligationsPage";
 import { SessionProvider, useSession } from "./auth/session";
+import { RegionProvider } from "./region/RegionContext";
 import { SignInPage } from "./auth/SignInPage";
 import { UsersRolesPage } from "./auth/UsersRolesPage";
 import { BusinessSettingsPage } from "./settings/BusinessSettingsPage";
@@ -67,7 +68,9 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
       <SessionProvider>
-        <App />
+        <RegionProvider>
+          <App />
+        </RegionProvider>
       </SessionProvider>
     </BrowserRouter>
   </StrictMode>,

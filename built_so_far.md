@@ -29,7 +29,7 @@
 | 19 | Conditional Funding Plan | **Done — verified locally** |
 | 20 | Funding Passport | **Done — verified locally** |
 | 21 | Finance Chat (read-only) | **Done — verified locally** |
-| 22 | Region Pack | Not started |
+| 22 | Region Pack | **Done — verified locally** |
 
 ## Prompt 00 — runnable foundation
 
@@ -922,6 +922,8 @@
 - The customer may not pay after a reminder. Only a payment recorded in the obligations module reduces outstanding balance.
 - The seven-day cooldown covers successful sandbox reminders; the mock does not send a real message. Legacy API clients can still create a reminder proposal directly if they supply a current verified contact, while the app UI uses Guardian drafts for reminder creation.
 
+A versioned Region Pack changes how amounts and dates are shown, which import templates are offered and which illustrative financing catalogue is read, without changing any saved amount. Switching packs was tested to leave the ledger, balances, reserve and saved reports identical. No currency is converted, and no legal compliance is claimed.
+
 ## Not built or verified yet
 
 | Area | Current status |
@@ -1045,6 +1047,40 @@
 - The instruction scan is a pattern list. Safety does not depend on it, because the chat has no write tools and the model sees no record text.
 - The optional Claude drafter was tested with a test double only. No live API call was made, and `anthropic` is not in `requirements.txt`.
 - The chat explains saved results only. It never runs a new outlook, review, or match.
+
+## Prompt 22 — Region Pack
+
+### What was built
+
+| Area | What exists | Files |
+| --- | --- | --- |
+| Pack format | A versioned pack is a folder with `pack.json` and its own `catalogue.json`: currency and minor-unit exponent, language, number format (lakh or thousands grouping), currency symbol, date display, six display labels, import templates, and a notice that it is not legal compliance. Packs are checked with strict Pydantic models and catalogue checks when the API starts, so a bad pack stops the API. Two packs ship: Bangladesh (`region-bd-2026.10`, the existing sample catalogue moved into the pack) and India (`region-in-2026.10`, four new illustrative INR products in whole paise) | [backend/app/modules/region_packs/registry.py](backend/app/modules/region_packs/registry.py), [packs/](backend/app/modules/region_packs/packs/) |
+| Money safety | The pack's exponent must equal the platform's exponent for its currency. Catalogue money fields must be integers. A pack has no exchange rate, and the match engine still refuses a currency the product does not lend in. Amounts typed or imported keep "." as the decimal separator, so a pack cannot display a decimal comma | same |
+| Choosing a pack | The active pack is the owner's last choice, otherwise the pack for the business's jurisdiction, otherwise none (built-in display, default sample catalogue). Owner only (`regionpack.select`); every member can read it. A stale screen gets 409, unknown or malformed IDs get 422, and another business gets 404. The choice is an insert-only history table (database triggers) and an audit event | [router.py](backend/app/modules/region_packs/router.py), [0023_region_pack.py](backend/migrations/versions/0023_region_pack.py), [policy.py](backend/app/modules/identity/policy.py) |
+| Catalogue selection | Funding Matches reads the active pack's catalogue, stamps the saved run with the pack ID and version, and stores the catalogue with the run as before. Earlier runs are untouched and still reproduce. A pack for another market than the business shows a warning and its products show as "not offered" | [funding/router.py](backend/app/modules/funding/router.py), [funding/engine.py](backend/app/modules/funding/engine.py) |
+| Import templates | Each pack lists templates (header names, date format, signed or debit/credit columns). The server checks them against a file's header row with the importer's own `Mapping` rules and offers only those that fit and match the account currency. Choosing one only fills in the form. File text is never echoed | same router (`/imports/{id}/region-templates`) |
+| UI | Region Pack card on Business settings (active pack, examples, warnings, labels, templates, sample catalogue, history; owner preview, then confirm). A header pill and a one-line pack note (version, jurisdiction, currency, "not legal compliance") on Overview, Records, Import, Financial Health, Cash Outlook and Funding Matches. Amounts, dates and the mobile-wallet label follow the pack. Switching remounts the page. Built with design.md tokens, solid fills, tabular numerals | [frontend/src/region/](frontend/src/region/), [money.ts](frontend/src/money.ts), [AppShell.tsx](frontend/src/shell/AppShell.tsx), [styles.css](frontend/src/styles.css) |
+
+### Evidence (run on 20 Oct 2026)
+
+- `alembic upgrade head` → `0023_region_pack`; health readiness expects it.
+- `pytest -q` → **513 passed**: the 442 earlier tests plus 71 in [backend/tests/test_region_pack.py](backend/tests/test_region_pack.py).
+  - Pack validation: both packs load; 23 malformed pack files and 18 malformed catalogues are refused (wrong exponent, unknown jurisdiction or currency, float money, duplicate IDs, bad separators, missing labels, an added exchange rate, an empty market).
+  - India catalogue by hand: INR 1,00,000 working capital line costs a 100,000 paise fee and 345,205 paise interest (total repayment 10,345,205); the invoice advance costs 240,000.
+  - **Switching changes presentation and catalogue, not saved money:** ledger, anchors, bills, reserve, profile version and Financial Health are identical before and after BD→IN→BD. The BDT need on the India catalogue matches nothing (jurisdiction and currency filters). The earlier saved run is unchanged and still verifies.
+  - An India business (INR) gets India matches end to end.
+  - Permissions and isolation: staff and bookkeepers cannot switch (403, audited); signed-out 401; other business 404; 10 invalid bodies; history cannot be updated, deleted or truncated.
+  - Templates: a Bangladesh file maps and parses to exact minor units; an India lakh-grouped file parses exactly; a template for another currency is not offered; another business's batch gives 404.
+- `npm run build` passes.
+- **Browser run** (headless Edge, throwaway business in the test database): the BD→IN switch showed a preview with warnings, then updated the header pill, amount and date examples and the wallet label; the same BDT reserve and ledger amounts show as "BDT 80,000.00"; the pack note appears on all six screens; the template picker marked the fitting template and filled the form; no horizontal overflow at 1440 and 390 px.
+
+### Known gaps and risks
+
+- Only two packs. The India catalogue is invented sample data, and the Bangladesh catalogue still holds one Kenya product used to test exclusion.
+- Chart axis dates and some timestamps still use fixed en-GB formats.
+- Only the mobile-wallet label is applied across screens; the other labels appear in the pack card only.
+- No translation: language labels are English variants. The pack's jurisdiction is not checked against the business's, only warned about.
+- Number input accepts "." decimals only.
 
 ## What can be claimed now
 

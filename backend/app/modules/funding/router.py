@@ -3,9 +3,7 @@
 Nothing here applies to a lender, shares business data, or implies approval; results are saved, append-only runs.
 """
 
-import json
 from datetime import date, timedelta
-from pathlib import Path
 from typing import Literal
 from uuid import UUID
 
@@ -23,9 +21,12 @@ from app.modules.health_summary.service import load_rows
 from app.modules.identity.deps import BusinessContext, require
 from app.modules.outlook.service import canonical, freeze_inputs, sha256
 from app.modules.records.service import business_today
+from app.modules.region_packs.registry import default_catalogue
+from app.modules.region_packs.router import catalogue_for_business
 
 router = APIRouter(prefix="/api/businesses/{business_id}/funding-matches", tags=["funding matches"])
-CATALOGUE = json.loads((Path(__file__).parent / "catalogue.json").read_text(encoding="utf-8"))
+# The default (Bangladesh) sample catalogue. A business reads the catalogue of its active region pack instead (see run() and catalogue()).
+CATALOGUE = default_catalogue()
 
 
 class MatchIn(BaseModel):
@@ -61,8 +62,8 @@ _SELECT = "SELECT f.*, u.display_name AS created_by_name FROM funding_match_run 
 
 
 @router.get("/catalogue")
-def catalogue(ctx: BusinessContext = Depends(require("funding.read"))) -> dict:
-    return CATALOGUE | {"label_for_results": LABEL, "notice": NOTICE, "purposes": PURPOSES, "documents": DOCUMENTS, "security_declared": SECURITY_DECLARED}
+def catalogue(ctx: BusinessContext = Depends(require("funding.read")), db: Session = Depends(get_session)) -> dict:
+    return catalogue_for_business(db, ctx.business_id) | {"label_for_results": LABEL, "notice": NOTICE, "purposes": PURPOSES, "documents": DOCUMENTS, "security_declared": SECURITY_DECLARED}
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
@@ -72,18 +73,19 @@ def run(body: MatchIn, ctx: BusinessContext = Depends(require("funding.run")), d
     req = {"amount_minor": body.amount_minor, "currency": body.currency, "needed_by": body.needed_by.isoformat(), "purpose": body.purpose,
            "receiving_account_id": str(body.receiving_account_id), "months_trading": body.months_trading,
            "security_available": sorted(set(body.security_available)), "documents_available": sorted(set(body.documents_available))}
+    catalogue_used = catalogue_for_business(db, ctx.business_id)
     try:
-        results = match(inputs, CATALOGUE, req)
+        results = match(inputs, catalogue_used, req)
     except MatchError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from exc
     rid = db.execute(text(
         """INSERT INTO funding_match_run (business_id, calc_version, catalogue_version, as_of, request, inputs, inputs_sha256, catalogue, results, created_by)
            VALUES (:b, :v, :cv, :d, CAST(:rq AS jsonb), CAST(:i AS jsonb), :h, CAST(:c AS jsonb), CAST(:r AS jsonb), :u) RETURNING id"""),
-        {"b": ctx.business_id, "v": CALC_VERSION, "cv": CATALOGUE["version"], "d": inputs["as_of"], "rq": canonical(req), "i": canonical(inputs),
-         "h": sha256(inputs), "c": canonical(CATALOGUE), "r": canonical(results), "u": ctx.user.id}).scalar_one()
+        {"b": ctx.business_id, "v": CALC_VERSION, "cv": catalogue_used["version"], "d": inputs["as_of"], "rq": canonical(req), "i": canonical(inputs),
+         "h": sha256(inputs), "c": canonical(catalogue_used), "r": canonical(results), "u": ctx.user.id}).scalar_one()
     record_event(db, action="funding.run", outcome="success", actor=Actor(ctx.user.id, ctx.user.display_name, ctx.role), business_id=ctx.business_id,
                  target_type="funding_match_run", target_id=rid,
-                 details={"catalogue_version": CATALOGUE["version"], "eligible": len(results["eligible"]), "excluded": len(results["excluded"]),
+                 details={"catalogue_version": catalogue_used["version"], "region_pack": (catalogue_used.get("region_pack") or {}).get("id"), "eligible": len(results["eligible"]), "excluded": len(results["excluded"]),
                           "amount_minor": body.amount_minor, "currency": body.currency, "inputs_sha256": sha256(inputs)[:16]})
     db.commit()
     return _row(db.execute(text(_SELECT + " AND f.id = :i"), {"b": ctx.business_id, "i": rid}).mappings().one())

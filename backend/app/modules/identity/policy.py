@@ -91,6 +91,10 @@ ROLE_MATRIX: dict[str, frozenset[str]] = {
     # read action (records.read, paymentreview.read, funding.read), checked per tool; the chat has no write tools.
     "chat.ask": frozenset({"owner", "bookkeeper", "staff"}),
     "chat.read": frozenset({"owner", "bookkeeper", "staff"}),
+    # Region Pack: see the active pack and the packs on offer (all members, like the business profile) / choose a pack (owner only).
+    # A pack changes presentation, offered import templates, and the illustrative catalogue; it never changes a saved amount.
+    "regionpack.read": frozenset({"owner", "bookkeeper", "staff"}),
+    "regionpack.select": frozenset({"owner"}),
     # Read the business's audit history.
     "audit.read": frozenset({"owner", "bookkeeper"}),
 }

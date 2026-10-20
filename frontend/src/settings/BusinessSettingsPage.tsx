@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ROLE_LABELS, useSession, type Account, type BusinessProfile } from "../auth/session";
 import { formatMoney, minorToMajorString, parseMajorToMinor } from "../money";
 import { errorFor, readErrors, type FieldErrors } from "./apiErrors";
+import { RegionPackCard } from "../region/RegionPackCard";
 import { exponentOf, Field, KIND_LABELS, TimezoneInput } from "./fields";
 
 export function BusinessSettingsPage() {
@@ -55,6 +56,8 @@ export function BusinessSettingsPage() {
           </p>
         </section>
       )}
+
+      <RegionPackCard />
 
       <AccountsCard profile={profile} canEdit={canEdit} />
     </>

@@ -30,12 +30,12 @@ def make_user() -> tuple[str, TestClient]:
 class Biz:
     """A fresh business owned by a fresh user, with the three Northstar fixture accounts."""
 
-    def __init__(self, reserve_minor: int = 8_000_000):
+    def __init__(self, reserve_minor: int = 8_000_000, jurisdiction: str = "BD", currency: str = "BDT", timezone: str = "Asia/Dhaka"):
         _, self.owner = make_user()
         body = self.owner.post("/api/businesses", json={
-            "name": "Fixture Co", "jurisdiction": "BD", "base_currency": "BDT", "timezone": "Asia/Dhaka",
-            "reserve": {"amount_minor": reserve_minor, "currency": "BDT"},
-            "accounts": [{"label": a["label"], "kind": a["kind"], "currency": a["currency"]} for a in FIXTURE["accounts"]],
+            "name": "Fixture Co", "jurisdiction": jurisdiction, "base_currency": currency, "timezone": timezone,
+            "reserve": {"amount_minor": reserve_minor, "currency": currency},
+            "accounts": [{"label": a["label"], "kind": a["kind"], "currency": currency} for a in FIXTURE["accounts"]],
         })
         assert body.status_code == 201, body.text
         b = body.json()

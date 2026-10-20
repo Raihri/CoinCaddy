@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { RegionNote } from "../region/RegionNote";
 import { Link } from "react-router-dom";
 import { api, fmtDate } from "../api";
 import { useSession } from "../auth/session";
@@ -87,6 +88,7 @@ export function FinancialHealthPage() {
           <input type="month" value={month} max={data.as_of.slice(0, 7)} min="2000-01" onChange={(e) => e.target.value && setMonth(e.target.value)} />
         </label>
       </div>
+      <RegionNote />
       <p className="notice">{data.notice}</p>
       {!s.complete && (
         <p className="badge badge-warning block-badge" role="status">

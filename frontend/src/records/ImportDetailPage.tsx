@@ -4,6 +4,8 @@ import { useSession } from "../auth/session";
 import { formatMoney } from "../money";
 import { readErrors } from "../settings/apiErrors";
 import { exponentOf, Field } from "../settings/fields";
+import { RegionNote } from "../region/RegionNote";
+import { TemplatePicker } from "../region/TemplatePicker";
 import { STATUS_BADGE, type ImportBatch, type Mapping, type StagedRow } from "./types";
 
 const VIEWS = [
@@ -79,13 +81,14 @@ export function ImportDetailPage() {
         </div>
       </div>
 
+      <RegionNote />
       {message && <p className={`badge badge-${message.kind}`} role="status">{message.text}</p>}
       {batch.status === "posted" && (
         <p className="badge badge-success">Posted {batch.posted_count} rows to the ledger on {new Date(batch.posted_at!).toLocaleString("en-GB")}.</p>
       )}
 
       {editable && can("import.stage") && (batch.status === "needs_mapping" || editMapping) && (
-        <MappingCard batch={batch} busy={busy}
+        <MappingCard batch={batch} busy={busy} base={base!}
                      onApply={(m) => act("/mapping", "PUT", { expected_revision: batch.revision, mapping: m }, () => {
                        setEditMapping(false);
                        setMessage({ kind: "success", text: "Mapping applied. Review the preview below." });
@@ -220,7 +223,7 @@ const FIELDS: [keyof Mapping, string, boolean][] = [
   ["counterparty_column", "Counterparty", false], ["currency_column", "Currency", false],
 ];
 
-function MappingCard({ batch, busy, onApply }: { batch: ImportBatch; busy: boolean; onApply: (m: Mapping) => void }) {
+function MappingCard({ batch, busy, base, onApply }: { batch: ImportBatch; busy: boolean; base: string; onApply: (m: Mapping) => void }) {
   const [m, setM] = useState<Mapping>(batch.mapping ?? batch.suggested_mapping);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => setM(batch.mapping ?? batch.suggested_mapping), [batch.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -258,6 +261,7 @@ function MappingCard({ batch, busy, onApply }: { batch: ImportBatch; busy: boole
   return (
     <section className="card" aria-labelledby="map-title">
       <h2 id="map-title" className="card-title">Field mapping</h2>
+      <TemplatePicker base={base} batchId={batch.id} onUse={(t) => { setM(t); setError(null); }} />
       <div className="form-grid">
         {FIELDS.map(([key, label, required]) => (
           <Field key={key} label={`${label}${required ? "" : " (optional)"}`}>{columnSelect(key, required)}</Field>

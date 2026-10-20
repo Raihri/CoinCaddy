@@ -1,0 +1,40 @@
+{
+  "id": "in",
+  "version": "region-in-2026.10",
+  "name": "India",
+  "jurisdiction": "IN",
+  "currency": "INR",
+  "minor_unit_exponent": 2,
+  "language": "en-IN",
+  "number_format": {"grouping": "lakh", "group_separator": ",", "decimal_separator": "."},
+  "currency_display": {"symbol": "₹", "position": "prefix"},
+  "date_display": "DD/MM/YYYY",
+  "labels": {
+    "cash": "Cash and bank balance",
+    "receivables": "Sundry debtors",
+    "payables": "Sundry creditors",
+    "mobile_wallet": "UPI / wallet account",
+    "reserve": "Minimum cash buffer",
+    "financing": "Financing"
+  },
+  "import_templates": [
+    {
+      "id": "in-bank-debit-credit",
+      "name": "Bank statement, withdrawal and deposit columns",
+      "description": "Date as DD/MM/YYYY with separate Withdrawal and Deposit columns.",
+      "date_format": "DD/MM/YYYY",
+      "amount_mode": "debit_credit",
+      "columns": {"date": "Txn Date", "description": "Narration", "debit": "Withdrawal", "credit": "Deposit", "reference": "Chq/Ref No"}
+    },
+    {
+      "id": "in-upi-signed",
+      "name": "UPI or wallet export, one signed amount column",
+      "description": "Date as DD-MM-YYYY with one Amount column where negative means money out.",
+      "date_format": "DD-MM-YYYY",
+      "amount_mode": "signed",
+      "columns": {"date": "Date", "description": "Description", "amount": "Amount", "reference": "UPI Ref"}
+    }
+  ],
+  "catalogue_file": "catalogue.json",
+  "notice": "Illustrative sample terms and presentation settings for a prototype. Not legal, tax or regulatory advice, and not a claim of compliance in India."
+}

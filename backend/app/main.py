@@ -29,6 +29,8 @@ from app.modules.readiness.router import router as readiness_router
 from app.modules.rescue.router import permission_router as deferral_permission_router
 from app.modules.rescue.router import router as rescue_router
 from app.modules.records.files import MAX_FILE_BYTES
+from app.modules.region_packs.router import reference_router as region_pack_reference_router
+from app.modules.region_packs.router import router as region_pack_router
 from app.modules.records.router import router as records_router
 from app.modules.identity.router import auth_router, business_router
 
@@ -68,6 +70,8 @@ def create_app() -> FastAPI:
     app.include_router(fraud_router)
     app.include_router(executor_router)
     app.include_router(chat_router)
+    app.include_router(region_pack_router)
+    app.include_router(region_pack_reference_router)
     # Refuse oversized uploads before multipart parsing (file limit plus room for form overhead).
     app.add_middleware(BodySizeLimit, path_pattern=r"/api/businesses/[^/]+/imports", max_bytes=MAX_FILE_BYTES + 64 * 1024)
     return app

@@ -23,15 +23,6 @@ export function parseMajorToMinor(input: string, exponent: number, maxMinor: num
   return { ok: true, minor: Number(minor) };
 }
 
-function group(whole: string, lakh: boolean): string {
-  if (!lakh) return whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  // South Asian grouping used for BDT: 1,00,000.
-  if (whole.length <= 3) return whole;
-  const last3 = whole.slice(-3);
-  const rest = whole.slice(0, -3).replace(/\B(?=(\d{2})+(?!\d))/g, ",");
-  return `${rest},${last3}`;
-}
-
 export function minorToMajorString(minor: number, exponent: number): string {
   const s = Math.abs(minor).toString().padStart(exponent + 1, "0");
   const whole = exponent ? s.slice(0, -exponent) : s;
@@ -39,10 +30,5 @@ export function minorToMajorString(minor: number, exponent: number): string {
   return `${minor < 0 ? "-" : ""}${whole}${frac ? "." + frac : ""}`;
 }
 
-export function formatMoney(minor: number, currency: string, exponent: number): string {
-  const plain = minorToMajorString(Math.abs(minor), exponent);
-  const [whole, frac] = plain.split(".");
-  const body = group(whole, currency === "BDT") + (frac ? "." + frac : "");
-  const sign = minor < 0 ? "-" : "";
-  return currency === "BDT" ? `${sign}৳ ${body}` : `${sign}${currency} ${body}`;
-}
+// Display follows the active Region Pack (see region/format.ts); the stored value is never changed.
+export { formatMoney } from "./region/format";

@@ -638,3 +638,25 @@ a.chip { color: var(--primary); }
 .chat-side-note { margin: 0; }
 @media (max-width: 1100px) { .chat-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; } }
 @media (max-width: 600px) { .chat-answer-head { flex-direction: column; gap: 2px; } .chat-facts { grid-template-columns: minmax(0, 1fr); } }
+
+/* Region Pack (Prompt 22): solid fills and design.md tokens only. */
+.pill-muted { background: var(--surface-muted); color: var(--text-secondary); }
+.region-note { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 12px; color: var(--text-secondary); }
+.region-note strong { color: var(--text-primary); }
+.region-details { margin: 12px 0; border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; background: var(--surface); }
+.region-details summary { cursor: pointer; font-weight: 600; letter-spacing: -0.04em; }
+.region-details .table-wrap { margin-top: 12px; }
+.region-switch { display: grid; gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); max-width: 640px; }
+.region-preview { display: grid; gap: 12px; border: 1px solid var(--border); border-radius: 12px; padding: 16px; background: var(--surface-muted); }
+.region-preview .card-title { margin: 0; }
+.region-caption { text-align: left; font-size: 12px; font-weight: 500; color: var(--text-secondary); padding: 12px 0 4px; }
+.template-picker { display: grid; gap: 8px; margin-bottom: 16px; padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-muted); }
+.template-picker .card-title { margin: 0; }
+.template-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.template-item { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); }
+.template-text { flex: 1; min-width: 0; }
+.template-item .badge, .template-item .btn { flex: none; }
+@media (max-width: 640px) {
+  .template-item { flex-wrap: wrap; }
+  .region-switch { max-width: none; }
+}

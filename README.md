@@ -63,7 +63,7 @@ Captured from the deployed app on 20 October 2026. All business and transaction 
 ### Prerequisites
 
 - Docker with Docker Compose
-- Python 3.12
+- Python 3.12.8 (pinned in the root `.python-version` for consistent local and Render builds)
 - Node.js and npm
 
 ### Start the services

@@ -38,6 +38,10 @@ ROLE_MATRIX: dict[str, frozenset[str]] = {
     "ledger.classify": frozenset({"owner", "bookkeeper"}),
     # Calculate a new Cash Outlook snapshot (reading outlooks only needs records.read).
     "outlook.run": frozenset({"owner", "bookkeeper"}),
+    # See alerts and their supporting record IDs (all members; the same data the outlook and ledger show them).
+    "alerts.read": frozenset({"owner", "bookkeeper", "staff"}),
+    # Evaluate the alert rules now (reading alerts only needs alerts.read).
+    "alerts.run": frozenset({"owner", "bookkeeper"}),
     # Read the business's audit history.
     "audit.read": frozenset({"owner", "bookkeeper"}),
 }

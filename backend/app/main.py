@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
+from app.modules.alerts.router import router as alerts_router
 from app.modules.audit.router import router as audit_router
 from app.modules.business_setup.router import reference_router
 from app.modules.business_setup.router import router as business_setup_router
@@ -38,6 +39,7 @@ def create_app() -> FastAPI:
     app.include_router(obligations_router)
     app.include_router(financial_health_router)
     app.include_router(outlook_router)
+    app.include_router(alerts_router)
     # Refuse oversized uploads before multipart parsing (file limit plus room for form overhead).
     app.add_middleware(BodySizeLimit, path_pattern=r"/api/businesses/[^/]+/imports", max_bytes=MAX_FILE_BYTES + 64 * 1024)
     return app

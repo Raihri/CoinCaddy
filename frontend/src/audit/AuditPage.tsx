@@ -126,6 +126,10 @@ function describe(e: AuditEvent): string {
       return "Tried to classify transactions without permission";
     case "outlook.snapshot:success":
       return `Calculated a cash outlook for ${d.as_of}${d.expected_breach ? " (reserve breach on the expected path)" : d.cautious_breach ? " (breach only on the cautious path)" : ""}`;
+    case "alerts.run:success":
+      return `Checked alerts: ${d.created} new, ${d.updated} changed, ${d.resolved} cleared`;
+    case "alerts.run:denied":
+      return "Tried to run the alert check without permission";
     case "outlook.run:denied":
       return "Tried to calculate a cash outlook without permission";
     case "cash.manage:denied":

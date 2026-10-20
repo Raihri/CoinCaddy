@@ -16,7 +16,8 @@
 | 06 | Receivables and Payables Ledger | **Done — verified locally** |
 | 07 | Financial Health | **Done — verified locally** |
 | 08 | Cash Outlook | **Done — verified locally** |
-| 09–22 | Smart Alerts through Region Pack | Not started |
+| 09 | Smart Alerts | **Done — verified locally** |
+| 10–22 | Payment Review through Region Pack | Not started |
 
 ## Prompt 00 — runnable foundation
 
@@ -444,6 +445,42 @@
 - No future own-account transfers are modelled, so a shortfall in one account is not covered by another account's cash.
 - The outlook does not create alerts (Prompt 09) or run payment checks (Prompt 10). It only shows the projected breach.
 
+## Prompt 09 — Smart Alerts
+
+### What was built
+
+| Area | What exists | Files |
+| --- | --- | --- |
+| Schema | Alembic revision `0010_alerts`: `alert` (type, severity, status open/resolved, dedup key, date, amount, currency, cause, supporting record IDs, details, detection count, first/last run) and `alert_run` (as-of date, rules version, SHA-256 of the frozen inputs, created/updated/unchanged/resolved counts, notification text). A **partial unique index allows one open alert per (business, dedup key)**; `alert_run` is append-only (triggers) | [backend/migrations/versions/0010_alerts.py](backend/migrations/versions/0010_alerts.py) |
+| Rules (`alerts-v1`, pure) | Frozen inputs in, alert candidates out:<br>• **Reserve breach:** the Cash Outlook (recomputed from its frozen inputs) closes below the reserve. High if the expected path breaches, medium if only the cautious path does. Date = first breach, amount = gap.<br>• **Overdue invoice:** outstanding, not disputed, past due. Low 1–7 days, medium 8–30, high over 30. Amount = outstanding.<br>• **Unusual outflow:** a posted outflow in the last 7 days at least 3× the median of the previous 90 days of outflows in that currency (needs 5+ earlier outflows). Own-account transfers and payments already allocated to a bill are excluded. Medium; high at 10× or more.<br>• **Repayment pressure:** an outstanding `loan_repayment` bill due within 30 days that is overdue (high) or whose due day closes below the reserve after paying it (high on the expected path, medium on the cautious path only).<br>Cause texts contain no money amounts; the amount is its own field | [backend/app/modules/alerts/engine.py](backend/app/modules/alerts/engine.py) |
+| Run and dedup | `POST …/alerts/run` freezes inputs, evaluates, and reconciles with stored alerts under a per-business advisory lock: a new key inserts an alert; a key still open updates the **same** alert (changed figures overwrite it; `detection_count` rises); an open alert whose cause is gone is marked **resolved** (never deleted); a returning cause becomes a new alert. The run row is written once with its final counts | [backend/app/modules/alerts/service.py](backend/app/modules/alerts/service.py) |
+| API | `POST …/alerts/run` (new role action `alerts.run`: owner, bookkeeper; audited as `alerts.run`), `GET …/alerts?status=open|resolved|all`, `GET …/alerts/{id}` (new `alerts.read`: all members). Another business's ID → 404 | [backend/app/modules/alerts/router.py](backend/app/modules/alerts/router.py), [policy.py](backend/app/modules/identity/policy.py) |
+| External notification text | Each run that creates alerts stores one minimal text: "SME Finance Copilot: N new alert(s) need your attention. Sign in to view details." No amount, party, document, date, or cause. **Nothing is actually sent** (no email/SMS channel exists); the text is stored and returned for a future sender | [backend/app/modules/alerts/service.py](backend/app/modules/alerts/service.py) |
+| UI | **Overview** is now available (layout of the Priority actions list in `images/01-overview.png`, tokens from `design.md`). Each alert card shows title, severity badge, cause, amount (labelled Shortfall for reserve breaches), date, first-seen date, and supporting-record chips linking to the invoice, bill, or account. It also shows when alerts were last checked and warns if that was not today. Owners and bookkeepers get "Check for alerts now"; staff see the list read-only. The **KPI tiles and the outlook mini-chart from the mockup are not built**; the page contains only alerts | [frontend/src/overview/OverviewPage.tsx](frontend/src/overview/OverviewPage.tsx) |
+
+### Evidence (run on 20 Oct 2026)
+
+- `alembic upgrade head` → `0009_forecast_snapshot -> 0010_alerts`; `/api/health/ready` expects `0010_alerts`.
+- `pytest -q` → **299 passed**: 285 earlier plus 14 new in [backend/tests/test_alerts.py](backend/tests/test_alerts.py). Hand-worked case (bank 10,000,000, reserve 8,000,000):
+  - **True triggers, exact:** a 3,000,000 loan repayment due 25 Oct closes that day at 7,000,000 → reserve breach **high, 25 Oct, gap 1,000,000** and repayment pressure **high, 25 Oct, 3,000,000**. A 500,000 invoice 15 days overdue → **medium, due 5 Oct**. Outflows 90k/100k/105k/110k/120k → median 105,000; a 400,000 outflow → **medium, "3.8 times"**.
+  - **Non-triggers:** disputed overdue invoice, invoice not yet due, a 300,000 outflow (below 3× median), the same loan with 50,000,000 cash, only 4 baseline outflows, an outflow just outside the 7-day window; exactly 3× median does trigger.
+  - **Severity bands:** overdue 1/7/8/30/31 days → low/low/medium/medium/high. A breach on the cautious path only → medium (expected 8,500,000, cautious 7,500,000, gap 500,000).
+  - **No duplicate on retry (API):** first run creates 3 alerts (reserve breach 2,000,000 gap on day 3, repayment pressure, overdue invoice); two retries create 0, change 0, return the same alert IDs; the DB has exactly 3 rows with `detection_count` 3. Six **concurrent** runs create 3 alerts in total.
+  - **Lifecycle:** paying the invoice resolves its alert on the next run (visible under `status=resolved`); a partial payment updates the same alert (2,500,000 → 1,500,000) instead of adding one; an outflow later allocated to a bill resolves its unusual-outflow alert.
+  - **Unusual outflow through the real import path** (CSV → staged → posted), not only the pure engine.
+  - **Privacy and access:** notification text has no party, document number, currency, amount, or cause; no session → 401; staff → 403 on run but can read; another business → 404 for list, read, and run with the same answer as an unknown ID; a business never sees another's data in its run; the staff refusal is audited; `alert_run` UPDATE is rejected as append-only.
+- **Browser run (real UI, demo business, Amina):** the Overview showed "Alerts have not been checked yet" → **Check for alerts now** → "1 new": **High, "The expected path closes below the owner reserve on 21 Oct 2026", shortfall ৳ 36,999.00**. This equals the recomputed outlook (bank BDT 43,001.00 vs reserve BDT 80,000.00 → gap 3,699,900 minor). A second run reported 0 new, 1 unchanged. The 375px phone view has no horizontal overflow.
+- `audit.verify` → `Audit chain OK: 39 events checked`. The development database holds fewer events than at the end of Prompt 08 (558); it appears to have been reset outside this work.
+
+### Known gaps and risks
+
+- Alerts are evaluated only when someone presses the button (or calls the API). There is no scheduler or background worker, so nothing alerts on its own and the page warns when the last check was not today.
+- No acknowledge, snooze, or dismiss. An alert goes away only when its cause is gone. Unusual-outflow alerts therefore disappear after the 7-day window even if nobody looked at them.
+- Thresholds (3× median, 90/7-day windows, 5-outflow minimum, 30-day repayment horizon, severity bands) are fixed for `alerts-v1`, not per-business settings. The median rule can over- or under-trigger for businesses with few or very mixed outflows.
+- Repayment pressure only recognizes bills categorised `loan_repayment`. A reserve breach and a repayment alert for the same shortfall are both shown.
+- The reserve-breach alert is only as good as the outlook: stale or missing balances and unentered recurring bills change it (see Prompt 08 gaps).
+- No real notification channel; the minimal text is stored only. Fraud-case review and action execution are not part of this prompt.
+
 ## Not built or verified yet
 
 | Area | Current status |
@@ -451,7 +488,8 @@
 | Owner approval, action tiers T1–T3 | Not implemented (Prompt 15). Login, roles, and API business isolation (Prompt 01) and the audit trail (Prompt 02) are built |
 | Records foundation | Built: CSV/XLSX import (Prompt 04); balance reconstruction, reconciliation, restricted funds, and transfers (Prompt 05); receivables and payables with payments, reversals, and disputes (Prompt 06) |
 | Financial analysis and cash forecast | Built: Financial Health (Prompt 07) and Cash Outlook (Prompt 08) |
-| Alerts, Payment Review, evidence queue, and Rescue Plan | Not implemented (Prompts 09–11, 13) |
+| Alerts | Built: Smart Alerts (Prompt 09), manual run only |
+| Payment Review, evidence queue, and Rescue Plan | Not implemented (Prompts 10, 11, 13) |
 | Financing catalogue, matching, readiness, conditional plan, and Funding Passport | Not implemented (Prompts 12, 14, 19, 20) |
 | Fraud rules and payment hold | Not implemented (Prompt 16) |
 | Sandbox action executor and operation logs | Not implemented (Prompt 17) |
@@ -475,4 +513,6 @@ Account balances can be reconciled against statement anchors with declared sourc
 
 A cash-basis operating summary (not an audited P&L) ties every figure to its source records, and it was checked against the independent fixture. A 13-week Cash Outlook with expected and cautious paths is calculated from frozen, hash-verified input snapshots, and its exact path values were checked against a hand-worked fixture.
 
-No alerts, payment review, approval workflow, or lender connectivity exists yet.
+Deterministic alerts (reserve breach, overdue invoice, unusual outflow, repayment pressure) are shown on the Overview with their date, amount, cause, severity, and supporting record IDs, and repeated runs do not duplicate them. They run only on request; nothing is sent externally.
+
+No payment review, approval workflow, or lender connectivity exists yet.

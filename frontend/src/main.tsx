@@ -4,6 +4,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AuditPage } from "./audit/AuditPage";
 import { FinancialHealthPage } from "./health/FinancialHealthPage";
 import { CashOutlookPage } from "./outlook/CashOutlookPage";
+import { OverviewPage } from "./overview/OverviewPage";
 import { ImportDetailPage } from "./records/ImportDetailPage";
 import { RecordsPage } from "./records/RecordsPage";
 import { AccountPage } from "./cash/AccountPage";
@@ -32,6 +33,7 @@ function App() {
         <Route path="/business-settings" element={<BusinessSettingsPage />} />
         <Route path="/businesses/new" element={<CreateBusinessPage />} />
         <Route path="/approvals-audit" element={<AuditPage />} />
+        <Route path="/overview" element={<OverviewPage />} />
         <Route path="/records" element={<RecordsPage />} />
         <Route path="/financial-health" element={<FinancialHealthPage />} />
         <Route path="/cash-outlook" element={<CashOutlookPage />} />

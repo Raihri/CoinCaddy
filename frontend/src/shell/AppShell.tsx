@@ -13,10 +13,29 @@ export function AppShell() {
   const { me, active, profile, setActiveId, signOut } = useSession();
   const region = useRegion();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [fraudUnresolved, setFraudUnresolved] = useState(0);
   const location = useLocation();
+  const canReadFraud = active?.allowed_actions.includes("fraud.read") ?? false;
 
   // Close the mobile drawer after navigating.
   useEffect(() => setDrawerOpen(false), [location.pathname]);
+
+  useEffect(() => {
+    const businessId = active?.business_id;
+    if (!businessId || !canReadFraud) { setFraudUnresolved(0); return; }
+    let current = true;
+    const check = async () => {
+      try {
+        const response = await fetch(`/api/businesses/${businessId}/fraud/overview`);
+        if (!response.ok) return;
+        const overview = await response.json() as { unresolved?: number };
+        if (current) setFraudUnresolved(Math.max(0, overview.unresolved ?? 0));
+      } catch { /* Keep the shell quiet when the API is unavailable. */ }
+    };
+    void check();
+    const timer = window.setInterval(check, 45_000);
+    return () => { current = false; window.clearInterval(timer); };
+  }, [active?.business_id, canReadFraud]);
 
   return (
     <div className="shell">
@@ -47,6 +66,11 @@ export function AppShell() {
                 >
                   <NavIcon name={d.icon} />
                   <span className="nav-label">{d.label}</span>
+                  {d.path === "/fraud-monitor" && fraudUnresolved > 0 && (
+                    <span className="nav-alert-count" aria-label={`${fraudUnresolved} flags need review`}>
+                      <span className="nav-alert-pulse" aria-hidden="true" />{fraudUnresolved}
+                    </span>
+                  )}
                   {!d.available && <span className="nav-soon">Not built</span>}
                 </NavLink>
               </li>
@@ -125,6 +149,11 @@ export function AppShell() {
           )}
         </main>
       </div>
+      <NavLink to="/finance-chat" className="chat-fab" aria-label="Open Finance Chat">
+        <NavIcon name="chat" />
+        <span>Finance Chat</span>
+        <span className="chat-fab-hint">Ask</span>
+      </NavLink>
     </div>
   );
 }

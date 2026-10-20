@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { RegionNote } from "../region/RegionNote";
 import { Link } from "react-router-dom";
 import { api, fmtDate } from "../api";
@@ -38,6 +38,7 @@ export function OverviewPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const autoRunFor = useRef<string | null>(null);
   const base = active ? `/api/businesses/${active.business_id}/alerts` : "";
   const canRun = active?.allowed_actions.includes("alerts.run") ?? false;
 
@@ -46,9 +47,9 @@ export function OverviewPage() {
     const r = await api<AlertList>(base);
     if (r.ok) { setData(r.data); setError(null); } else setError(r.message);
   }, [base]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { setData(null); setError(null); setMessage(null); load(); }, [load]);
 
-  const run = async () => {
+  const run = useCallback(async () => {
     setBusy(true); setMessage(null);
     const r = await api<{ created: number; resolved: number; alerts: Alert[]; last_run: Run }>(`${base}/run`, "POST", {});
     setBusy(false);
@@ -57,7 +58,14 @@ export function OverviewPage() {
       ? `Checked now: ${r.data.created} new, ${r.data.resolved} cleared.`
       : "Checked now: nothing new. Existing alerts were not duplicated.");
     await load();
-  };
+  }, [base, load]);
+
+  useEffect(() => {
+    const businessId = active?.business_id;
+    if (!businessId || !canRun || !data || autoRunFor.current === businessId) return;
+    autoRunFor.current = businessId;
+    void run();
+  }, [active?.business_id, canRun, data, run]);
 
   const first = me?.user.display_name.split(" ")[0];
   const alerts = data?.alerts ?? [];
@@ -68,7 +76,6 @@ export function OverviewPage() {
           <h1 className="page-title">{first ? `Hello, ${first}` : "Overview"}</h1>
           <p className="page-sub">Your business position and the decisions that need attention today</p>
         </div>
-        {canRun && <button type="button" className="btn btn-primary" onClick={run} disabled={busy}>{busy ? "Checking…" : "Check for alerts now"}</button>}
       </div>
       <RegionNote />
 
@@ -80,6 +87,7 @@ export function OverviewPage() {
         {error && <p className="badge badge-danger" role="alert">{error}</p>}
         {message && <p className="badge badge-success" role="status">{message}</p>}
         {!data && !error && <p className="muted">Loading…</p>}
+        {busy && <p className="muted small" role="status" aria-live="polite">Checking accepted records for alerts…</p>}
         {data && (
           <p className="muted small alert-checked">
             {data.last_run

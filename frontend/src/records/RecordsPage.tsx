@@ -70,8 +70,8 @@ export function RecordsPage() {
           <p className="page-sub">Review sources and confirm what can be used in calculations</p>
         </div>
         <div className="header-actions">
-          <Link to="/records/obligations" className="btn btn-ghost">Invoices &amp; bills</Link>
-          <Link to="/records/transfers" className="btn btn-ghost">Transfers</Link>
+          <Link to="/records/obligations" className="btn btn-shortcut">Invoices &amp; Bills</Link>
+          <Link to="/records/transfers" className="btn btn-shortcut">Transfers</Link>
         </div>
       </div>
       <RegionNote />

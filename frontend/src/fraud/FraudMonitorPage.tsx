@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, fmtDate } from "../api";
 import { useSession } from "../auth/session";
 import { formatMoney } from "../money";
@@ -31,6 +31,8 @@ export function FraudMonitorPage() {
   const [error, setError] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [scanNote, setScanNote] = useState<string | null>(null);
+  const autoScannedFor = useRef<string | null>(null);
+  const canRun = active?.allowed_actions.includes("fraud.run") ?? false;
 
   useEffect(() => {
     if (!base) return;
@@ -75,6 +77,13 @@ export function FraudMonitorPage() {
     setPanelKey((k) => k + 1);
     load();
   };
+
+  useEffect(() => {
+    const businessId = active?.business_id;
+    if (!businessId || !canRun || autoScannedFor.current === businessId) return;
+    autoScannedFor.current = businessId;
+    void scan();
+  }, [active?.business_id, canRun]);
 
   const changed = () => load();
 

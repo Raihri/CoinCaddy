@@ -85,7 +85,7 @@ export function ReceivablesGuardianPage() {
       <div className="page-header">
         <div><h1 className="page-title">Receivables Guardian</h1>
           <p className="page-sub">See who owes you money, prepare a factual reminder, and track its sandbox approval.</p></div>
-        {canRead && <button type="button" className="btn btn-ghost" onClick={refresh}>Refresh</button>}
+        {canRead && <button type="button" className="btn btn-dark" onClick={refresh}>Refresh</button>}
       </div>
       {!canRead && <section className="card"><p>Only owners and bookkeepers can view customer collections.</p></section>}
       {error && <p className="badge badge-danger" role="alert">{error}</p>}
@@ -110,7 +110,7 @@ export function ReceivablesGuardianPage() {
             const first = customer?.invoices.find((i) => i.eligible);
             return <li key={s.party_id} className="queue-item"><strong>{s.rank}. {s.customer}</strong> · {s.reason}
               <span className="muted small block">{s.next_step}</span>
-              {first && <button type="button" className="btn btn-ghost btn-small" onClick={() => select(first.id)}>Review invoice {first.document_number}</button>}</li>;
+              {first && <button type="button" className="btn btn-dark btn-small" onClick={() => select(first.id)}>Review invoice {first.document_number}</button>}</li>;
           })}</ol>
         </section>
         <section className="card" style={{ marginTop: 16 }} aria-labelledby="invoices-title">
@@ -120,7 +120,7 @@ export function ReceivablesGuardianPage() {
               <td><Link className="link" to={`/records/obligations/${i.id}`}>{i.document_number}</Link></td><td>{c.party.name}</td>
               <td>{fmtDate(i.due_date)}</td><td className="num right">{money(i.outstanding_minor, i.currency)}</td>
               <td>{i.disputed ? <span className="badge badge-warning">Disputed · held</span> : i.days_overdue > 0 ? `${i.days_overdue} days overdue` : "Not yet due"}</td>
-              <td><button type="button" className="link-button" onClick={() => select(i.id)}>Review</button></td></tr>))}</tbody>
+              <td><button type="button" className="btn btn-dark btn-small" onClick={() => select(i.id)}>Review</button></td></tr>))}</tbody>
           </table></div>
         </section>
       </>}

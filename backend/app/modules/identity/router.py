@@ -38,6 +38,10 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class QuickLoginRequest(BaseModel):
+    email: str
+
+
 class RoleChange(BaseModel):
     role: Literal["owner", "bookkeeper", "staff"]
 
@@ -101,6 +105,34 @@ def login(body: LoginRequest, response: Response, db: Session = Depends(get_sess
         samesite="strict",
         secure=get_settings().app_env != "development",
         path="/api",
+    )
+    return _me(db, user["id"], user["email"], user["display_name"])
+
+
+@auth_router.post("/quick-login")
+def quick_login(body: QuickLoginRequest, response: Response, db: Session = Depends(get_session)) -> dict:
+    """Passwordless sign-in is an explicit demo convenience and can only select synthetic accounts."""
+    settings = get_settings()
+    if not settings.demo_quick_login_enabled:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Quick demo sign-in is unavailable")
+    email = body.email.strip().lower()
+    user = db.execute(
+        text("SELECT id, email, display_name FROM app_user WHERE email = :e AND is_synthetic = true"), {"e": email}
+    ).mappings().first()
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Synthetic demo user not found")
+
+    token = secrets.token_urlsafe(32)
+    session_id = db.execute(
+        text("INSERT INTO auth_session (token_hash, user_id, expires_at) VALUES (:h, :u, :exp) RETURNING id"),
+        {"h": token_hash(token), "u": user["id"], "exp": utc_now() + SESSION_TTL},
+    ).scalar_one()
+    record_event(db, action="auth.sign_in", outcome="success", actor=Actor(user["id"], user["display_name"]),
+                 target_type="session", target_id=session_id, details={"method": "quick_demo"})
+    db.commit()
+    response.set_cookie(
+        SESSION_COOKIE, token, max_age=int(SESSION_TTL.total_seconds()), httponly=True,
+        samesite="strict", secure=settings.app_env != "development", path="/api",
     )
     return _me(db, user["id"], user["email"], user["display_name"])
 

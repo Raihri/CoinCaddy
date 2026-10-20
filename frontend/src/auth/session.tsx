@@ -44,6 +44,7 @@ type SessionState = {
   options: SettingsOptions | null;
   refreshMe: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<string | null>;
+  quickSignIn: (email: string) => Promise<string | null>;
   signOut: () => Promise<void>;
 };
 
@@ -69,6 +70,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ email, password }),
     });
     if (!r.ok) return r.status === 401 ? "Email or password is incorrect." : "Sign-in failed. Is the API running?";
+    setMe((await r.json()) as Me);
+    return null;
+  }, []);
+
+  const quickSignIn = useCallback(async (email: string) => {
+    const r = await fetch("/api/auth/quick-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    if (!r.ok) return r.status === 404 ? "Quick demo sign-in is not enabled on this deployment." : "Could not sign in to this demo user.";
     setMe((await r.json()) as Me);
     return null;
   }, []);
@@ -107,7 +119,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   return (
     <SessionContext.Provider
-      value={{ me, loading, active, setActiveId, profile, setProfile, options, refreshMe, signIn, signOut }}
+      value={{ me, loading, active, setActiveId, profile, setProfile, options, refreshMe, signIn, quickSignIn, signOut }}
     >
       {children}
     </SessionContext.Provider>

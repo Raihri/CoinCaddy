@@ -56,7 +56,7 @@ export function ObligationDetailPage() {
         </div>
       </div>
       {message && <p className={`badge badge-${message.kind}`} role="status">{message.text}</p>}
-      {ob.direction === "receivable" && <p><Link className="link" to={`/receivables-guardian?invoice=${ob.id}`}>Review this invoice in Receivables Guardian</Link></p>}
+      {ob.direction === "receivable" && <p><Link className="btn btn-dark" to={`/receivables-guardian?invoice=${ob.id}`}>Review this invoice in Receivables Guardian</Link></p>}
 
       <div className="kpi-grid">
         <section className="card kpi"><span className="kpi-label">Original amount</span><span className="kpi-value num">{money(ob.amount_minor)}</span><span className="muted small">Never changed</span></section>

@@ -133,6 +133,20 @@ def test_sign_in_success_and_failure_are_recorded_without_secrets():
     assert all(e["business_id"] is None for e in events_since(start))  # user-level, not on business pages
 
 
+def test_quick_demo_sign_in_requires_opt_in_and_only_accepts_synthetic_users(monkeypatch):
+    settings = get_settings()
+    monkeypatch.setattr(settings, "demo_quick_login_enabled", False)
+    client = TestClient(app)
+    assert client.post("/api/auth/quick-login", json={"email": OWNER}).status_code == 404
+
+    monkeypatch.setattr(settings, "demo_quick_login_enabled", True)
+    response = client.post("/api/auth/quick-login", json={"email": OWNER})
+    assert response.status_code == 200
+    assert response.json()["user"]["email"] == OWNER
+    assert client.get("/api/auth/me").status_code == 200
+    assert client.post("/api/auth/quick-login", json={"email": "not-a-demo@example.com"}).status_code == 404
+
+
 def test_role_change_is_recorded_with_actor_business_and_outcome(northstar):
     start = last_seq()
     target = membership_id(northstar, STAFF)

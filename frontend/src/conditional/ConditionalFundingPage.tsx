@@ -94,6 +94,7 @@ export function ConditionalFundingPage() {
   return <>
     <div className="page-header"><div><h1 className="page-title">Conditional Funding Plan</h1>
       <p className="page-sub">Plan around an expected customer receipt, then compare a no-borrow path with an illustrative backup if it is late.</p></div>
+      {canWrite && <button type="button" className="btn btn-primary btn-create-plan" onClick={() => document.getElementById("new-plan")?.scrollIntoView({ behavior: "smooth", block: "start" })}>＋ Create a funding plan</button>}
       {canRead && <button className="btn btn-ghost" type="button" onClick={load}>Refresh</button>}</div>
     <p className="muted small">{selectedPlan?.notice ?? "A forecast is an estimate. Only a posted transaction linked to an invoice payment confirms settlement. A missed date never submits an application."}</p>
     {error && <p className="badge badge-danger" role="alert">{error}</p>}{notice && <p className="badge badge-success" role="status">{notice}</p>}
@@ -112,7 +113,7 @@ export function ConditionalFundingPage() {
           <Field label="Illustrative backup product"><select value={productId} onChange={(e) => setProductId(e.target.value)} disabled={!eligibleProducts.length}>
             {eligibleProducts.map((p) => <option key={p.id} value={p.id}>{p.name} · net {money(p.terms.net_proceeds_minor, run?.results.currency ?? "BDT")}</option>)}</select>
             {!eligibleProducts.length && <span className="muted small">That comparison has no eligible products. Select another saved comparison.</span>}</Field>
-          <div className="form-actions span-2"><button type="submit" className="btn btn-primary" disabled={busy || !eligibleProducts.length || !activeInvoice}>Create conditional plan</button></div>
+          <div className="form-actions span-2"><button type="submit" className="btn btn-primary btn-create-plan" disabled={busy || !eligibleProducts.length || !activeInvoice}>Create conditional funding plan</button></div>
         </form>}
       </section>}
       <div className="funding-grid" style={{ marginTop: 16 }}>

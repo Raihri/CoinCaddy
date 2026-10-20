@@ -261,6 +261,7 @@ export function AuditPage() {
   const [selected, setSelected] = useState<Proposal | null>(null);
   const [proposing, setProposing] = useState(false);
   const [historyKey, setHistoryKey] = useState(0);
+  const [activeTab, setActiveTab] = useState<"approvals" | "activity">("approvals");
   const [inboxError, setInboxError] = useState<string | null>(null);
   const money = (m: number, c: string) => formatMoney(m, c, exponentOf(options, c));
 
@@ -304,45 +305,52 @@ export function AuditPage() {
         </div>
       </div>
 
-      <div className="approvals-grid">
-        <div className="approvals-col">
-          {inboxError && <p className="badge badge-danger block-badge" role="alert">{inboxError}</p>}
-          {!canReadApprovals && (
-            <section className="card" aria-labelledby="inbox-title">
-              <h2 id="inbox-title" className="section-title">Approval inbox</h2>
-              <p className="badge badge-info block-badge" role="status">Only owners and bookkeepers can see proposals. Only owners approve them.</p>
-            </section>
-          )}
-          {canReadApprovals && !inbox && (
-            <section className="card"><h2 className="section-title">Approval inbox</h2><p className="muted">Loading…</p></section>
-          )}
-          {canReadApprovals && inbox && (
-            <ApprovalInbox items={inbox.items} pendingCount={inbox.counts.pending} money={money} selected={selected?.id ?? null}
-                           onReview={show} canPropose={can("approvals.propose")}
-                           onPropose={() => { setProposing(true); setSelected(null); scrollTo("propose-title"); }} />
-          )}
-        </div>
-
-        <div className="approvals-col">
-          <section className="card" aria-labelledby="passport-title">
-            <h2 id="passport-title" className="section-title">Funding Passport preview</h2>
-            <span className="badge badge-info">Preview on Funding Matches</span>
-            <p className="muted">Assemble and review the selected packet in Funding Matches. Sharing requires owner approval and runs only through the sandbox.</p>
-          </section>
-          <ActivityHistory base={base} canRead={can("audit.read")} businessName={active?.business_name} timezone={timezone} refreshKey={historyKey} />
-        </div>
+      <div className="page-tabs" role="tablist" aria-label="Approvals and audit sections">
+        <button type="button" role="tab" aria-selected={activeTab === "approvals"} className={`page-tab ${activeTab === "approvals" ? "is-active" : ""}`} onClick={() => setActiveTab("approvals")}>Approvals</button>
+        <button type="button" role="tab" aria-selected={activeTab === "activity"} className={`page-tab ${activeTab === "activity" ? "is-active" : ""}`} onClick={() => setActiveTab("activity")}>Activity history</button>
       </div>
 
-      {proposing && base && (
-        <ProposeForm base={base} accounts={profile?.accounts ?? []} money={money} exponent={(c) => exponentOf(options, c)}
-                     canReadReviews={can("paymentreview.read")} canReadReadiness={can("readiness.read")}
-                     onCreated={(p) => { setProposing(false); changed(p); show(p.id); }} onCancel={() => setProposing(false)} />
+      {activeTab === "approvals" ? <>
+        <div className="approvals-grid">
+          <div className="approvals-col">
+            {inboxError && <p className="badge badge-danger block-badge" role="alert">{inboxError}</p>}
+            {!canReadApprovals && (
+              <section className="card" aria-labelledby="inbox-title">
+                <h2 id="inbox-title" className="section-title">Approval inbox</h2>
+                <p className="badge badge-info block-badge" role="status">Only owners and bookkeepers can see proposals. Only owners approve them.</p>
+              </section>
+            )}
+            {canReadApprovals && !inbox && (
+              <section className="card"><h2 className="section-title">Approval inbox</h2><p className="muted">Loading…</p></section>
+            )}
+            {canReadApprovals && inbox && (
+              <ApprovalInbox items={inbox.items} pendingCount={inbox.counts.pending} money={money} selected={selected?.id ?? null}
+                             onReview={show} canPropose={can("approvals.propose")}
+                             onPropose={() => { setProposing(true); setSelected(null); scrollTo("propose-title"); }} />
+            )}
+          </div>
+          <div className="approvals-col">
+            <section className="card" aria-labelledby="passport-title">
+              <h2 id="passport-title" className="section-title">Funding Passport preview</h2>
+              <span className="badge badge-info">Preview on Funding Matches</span>
+              <p className="muted">Assemble and review the selected packet in Funding Matches. Sharing requires owner approval and runs only through the sandbox.</p>
+            </section>
+          </div>
+        </div>
+
+        {proposing && base && (
+          <ProposeForm base={base} accounts={profile?.accounts ?? []} money={money} exponent={(c) => exponentOf(options, c)}
+                       canReadReviews={can("paymentreview.read")} canReadReadiness={can("readiness.read")}
+                       onCreated={(p) => { setProposing(false); changed(p); show(p.id); }} onCancel={() => setProposing(false)} />
+        )}
+        {selected && base && (
+          <ProposalReview base={base} proposal={selected} policy={policy} money={money} fmtTime={fmtTime} timezone={timezone} canRun={can("executor.run")}
+                          onChanged={changed} onClose={() => setSelected(null)} />
+        )}
+        {base && can("executor.read") && <ExecutionLog base={base} adapters={adapters} refreshKey={historyKey} fmtTime={fmtTime} />}
+      </> : (
+        <ActivityHistory base={base} canRead={can("audit.read")} businessName={active?.business_name} timezone={timezone} refreshKey={historyKey} />
       )}
-      {selected && base && (
-        <ProposalReview base={base} proposal={selected} policy={policy} money={money} fmtTime={fmtTime} timezone={timezone} canRun={can("executor.run")}
-                        onChanged={changed} onClose={() => setSelected(null)} />
-      )}
-      {base && can("executor.read") && <ExecutionLog base={base} adapters={adapters} refreshKey={historyKey} fmtTime={fmtTime} />}
     </>
   );
 }

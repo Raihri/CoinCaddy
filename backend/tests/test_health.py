@@ -34,7 +34,7 @@ def test_ready_when_database_and_mock_services_are_up(mock_services_up):
     r = client.get("/api/health/ready")
     body = r.json()
     assert r.status_code == 200, body
-    assert body["checks"]["database"] == {"status": "ok", "schema_revision": "0018_receivables_guardian"}
+    assert body["checks"]["database"] == {"status": "ok", "schema_revision": "0021_passport_evidence_lineage"}
     assert body["checks"]["mock_services"] == {"status": "ok", "mode": "sandbox"}
 
 

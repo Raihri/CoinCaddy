@@ -11,6 +11,7 @@ from app.modules.business_setup.router import reference_router
 from app.modules.business_setup.router import router as business_setup_router
 from app.middleware import BodySizeLimit
 from app.modules.cash.router import router as cash_router
+from app.modules.conditional_funding.router import router as conditional_funding_router
 from app.modules.evidence_queue.router import router as evidence_queue_router
 from app.modules.executor.router import router as executor_router
 from app.modules.fraud.router import router as fraud_router
@@ -21,6 +22,7 @@ from app.modules.health_summary.router import router as financial_health_router
 from app.modules.obligations.router import router as obligations_router
 from app.modules.outlook.router import router as outlook_router
 from app.modules.payment_review.router import router as payment_review_router
+from app.modules.passport.router import router as passport_router
 from app.modules.readiness.router import documents_router as business_documents_router
 from app.modules.readiness.router import router as readiness_router
 from app.modules.rescue.router import permission_router as deferral_permission_router
@@ -55,10 +57,12 @@ def create_app() -> FastAPI:
     app.include_router(evidence_queue_router)
     app.include_router(funding_router)
     app.include_router(guardian_router)
+    app.include_router(conditional_funding_router)
     app.include_router(rescue_router)
     app.include_router(deferral_permission_router)
     app.include_router(readiness_router)
     app.include_router(business_documents_router)
+    app.include_router(passport_router)
     app.include_router(approvals_router)
     app.include_router(fraud_router)
     app.include_router(executor_router)

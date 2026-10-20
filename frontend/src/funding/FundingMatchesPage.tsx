@@ -6,6 +6,7 @@ import type { FieldErrors } from "../settings/apiErrors";
 import { exponentOf, Field } from "../settings/fields";
 import { DocumentsCard } from "./DocumentsCard";
 import { ReadinessCard } from "./ReadinessCard";
+import { FundingPassportCard } from "./FundingPassportCard";
 
 // Layout follows images/06-funding-matches.png (funding need, Compare options with Readiness beside it); styling follows design.md.
 // The Funding Passport card of the mockup belongs to a later prompt and is not built here.
@@ -39,6 +40,7 @@ export function FundingMatchesPage() {
   const canRun = active?.allowed_actions.includes("funding.run") ?? false;
   const readiness = { read: active?.allowed_actions.includes("readiness.read") ?? false, run: active?.allowed_actions.includes("readiness.run") ?? false };
   const docs = { read: active?.allowed_actions.includes("documents.read") ?? false, write: active?.allowed_actions.includes("documents.write") ?? false };
+  const passport = { read: active?.allowed_actions.includes("passport.read") ?? false, write: active?.allowed_actions.includes("passport.write") ?? false };
   const [docsVersion, setDocsVersion] = useState(0);
   const bizBase = active ? `/api/businesses/${active.business_id}` : "";
   const [run, setRun] = useState<Run | null>(null);
@@ -74,6 +76,7 @@ export function FundingMatchesPage() {
         ? <ReadinessCard base={bizBase} runId={run.id} eligible={run.results.eligible} excluded={run.results.excluded} canRun={readiness.run} docsVersion={docsVersion} />
         : null} />}
       {docs.read && <div style={{ marginTop: 16 }}><DocumentsCard base={bizBase} canWrite={docs.write} onChanged={() => setDocsVersion((v) => v + 1)} /></div>}
+      {passport.read && <FundingPassportCard base={bizBase} canWrite={passport.write} />}
       {rows.length > 1 && (
         <section className="card" style={{ marginTop: 16 }}>
           <h2 className="card-title">Saved comparisons</h2>

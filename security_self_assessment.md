@@ -1,8 +1,8 @@
 # SME Finance Copilot — Security Self-Assessment Report
 
-**Version:** 1.0 · **Assessment date:** 20 October 2026 · **Assessment state:** Design review only  
-**Scope:** The project folder's product/architecture/security plans and static mockups. No running application, source-code implementation, deployment, test results, or sandbox logs were present in the reviewed folder.  
-**Overall conclusion:** The proposed permission tiers and controls are specified but **not implemented or verified**. This report is a truthful baseline for the competition submission and a checklist for collecting implementation evidence. It is not a penetration test or security certification.
+**Version:** 1.1 · **Assessment date:** 20 October 2026 · **Assessment state:** Design baseline with a Prompt 20 implementation addendum
+**Scope:** The original report reviewed plans and mockups. The addendum also reviews Funding Passport source changes, its local PostgreSQL migration, focused API/sandbox tests, and frontend build. It does not assess the whole application, a deployment, or real-user data.
+**Overall conclusion:** Funding Passport controls described in the addendum are implemented and locally tested for the stated cases. This is not a penetration test or security certification, and the rest of this baseline requires reassessment against code.
 
 ## 1. Evidence reviewed
 
@@ -83,7 +83,7 @@ Permission decisions must be enforced by server-side policy from authenticated m
 
 ## 6. Known-risk register
 
-Priority reflects potential impact if a future implementation mishandles the item; it does not imply a vulnerability was found in code. There is no code to test yet.
+Priority reflects potential impact if a future implementation mishandles the item; it does not imply a vulnerability was found in code. The Funding Passport row reflects only the narrow local tests in the Prompt 20 addendum; other rows retain their prior baseline status.
 
 | ID | Risk | Priority | Required treatment before a live pilot | Status |
 | --- | --- | --- | --- | --- |
@@ -93,12 +93,20 @@ Priority reflects potential impact if a future implementation mishandles the ite
 | R4 | Malicious supplier destination change or lookalike company/payee | High | Hold, out-of-band verification, owner review, event record | Open — no implementation |
 | R5 | Unsafe file parsing or exposed uploaded financial documents | High | Quarantine, content/size limits, private encrypted storage, scoped links | Open — no implementation |
 | R6 | Prompt injection or AI-generated numerical/permission error | High | Read-only narrow tools, server policy, code-calculated numbers, hostile fixtures | Open — no implementation |
-| R7 | Sensitive financial data in logs or shared Funding Passport | High | Redaction, selected fields, recipient/expiry control, log review | Open — no implementation |
+| R7 | Sensitive financial data in logs or shared Funding Passport | High | Redaction, selected fields, recipient/expiry control, log review | Partial local mitigation: selected immutable packet, T3 gates, minimized evidence, sandbox tests; broader log/deployment review still open |
 | R8 | Stale or inaccurate illustrative financing terms mislead owners | High | Version/date/source, exact repayment schedule, illustrative label | Open — no implementation |
 | R9 | Fraud-rule false positives delay legitimate payments, or false negatives miss abuse | Medium | Reviewer workflow, measured labelled cases, bounded claims | Open — no implementation |
 | R10 | No retention, deletion, restore, incident, or key-rotation evidence | Medium | Operational policy and rehearsal before real data | Open — no implementation |
 
 **Residual risk:** Not measured. Controls have not been implemented, tested, or deployed; no risk may be marked “closed” based on these documents alone.
+
+### Prompt 20 implementation addendum
+
+- An owner selects exact packet sections, evidence-register entries, a simulated recipient, and a 1–30 day expiry. The API constructs values from business-scoped records and stores the immutable packet and fingerprint; unselected sections are not included.
+- Cash Outlook content is accepted only when the saved snapshot is hash-valid and its inputs still match current records. Obligations are aggregate totals by currency, with disputed amounts separately identified; customer/supplier names and invoice numbers are excluded. Evidence shares document type and dates, not the register row ID or storage location. Internal source IDs are retained for audit lineage.
+- Sharing is a T3 proposal, requiring an owner, fresh password re-authentication, documented verification, and a different owner as reviewer. Packet expiry and hash are rechecked before release and sandbox dispatch. The adapter targets only the local mock service and has no lender credentials.
+- Focused tests verify omission of unselected fields, expiry denial, staff approval denial, evidence minimization/void refusal, owner approval and release, and sandbox share. The focused set passed, and the full backend suite passed (427 tests) after updating the health-check expected schema revision.
+- **Remaining risks:** profile values are owner-maintained rather than independently verified; evidence entries attest that the business holds originals but do not transfer or verify those files; a disclosure cannot be recalled after the local mock accepts it; no real recipient, network, or production control has been assessed.
 
 ## 7. Required security test and evidence plan
 

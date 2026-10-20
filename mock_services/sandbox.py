@@ -77,6 +77,8 @@ class PacketRequest(_Strict):
     packet_id: StrictStr = Field(min_length=1, max_length=80)
     recipient: StrictStr = Field(min_length=1, max_length=200)
     fields: list[StrictStr] = Field(min_length=1, max_length=50)
+    packet: dict
+    packet_sha256: StrictStr = Field(pattern=r"^[0-9a-f]{64}$")
     expires_at: StrictStr = Field(min_length=10, max_length=40)
 
 
@@ -140,7 +142,7 @@ def initiate_payment(body: PaymentRequest, key: str = IdemKey) -> JSONResponse:
 @router.post("/packets")
 def share_packet(body: PacketRequest, key: str = IdemKey) -> JSONResponse:
     return _once("packets", key, body, lambda: (200, {
-        "reference": _ref("PKT", key), "status": "shared", "fields_received": len(body.fields),
+        "reference": _ref("PKT", key), "status": "shared", "fields_received": len(body.fields), "packet_sha256": body.packet_sha256,
         "note": f"Sandbox only: nothing was sent to {body.recipient}."}))
 
 

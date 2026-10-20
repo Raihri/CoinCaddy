@@ -261,5 +261,9 @@ function describePayload(p: Proposal, d: Record<string, unknown>, money: (minor:
       return { Product: `${d.product} · ${d.provider}`, Amount: amt("amount_minor"), "Needed by": String(d.needed_by),
                Purpose: String(d.purpose).replace(/_/g, " "), Recipient: `${d.recipient} (illustrative catalogue)`,
                "Readiness check": `${String(d.readiness_check_id).slice(0, 8)}… (ready)` };
+    case "funding_packet_share":
+      return { Packet: `${String(d.packet_version)} · ${String(d.packet_id).slice(0, 8)}…`, Recipient: String(d.recipient),
+               "Included fields": Array.isArray(d.disclosed_fields) ? d.disclosed_fields.join(", ") : "",
+               Expires: String(d.expires_at), "Disclosure fingerprint": String(d.packet_sha256) };
   }
 }

@@ -391,19 +391,22 @@ def test_request_validation(sandbox):
 # --- adapters and the mock boundary -----------------------------------------------------------------------------
 
 
-def test_adapters_are_separate_and_packet_sharing_is_ready_but_unused(sandbox):
+def test_adapters_are_separate_and_packet_sharing_is_available(sandbox):
     biz = approvals_setup()
     a = biz.owner.get(f"{biz.base}/sandbox/adapters").json()
     assert a["mode"] == "sandbox" and a["credentials"] == "none"
     by = {x["code"]: x for x in a["adapters"]}
     assert set(by) == {"reminder_send", "application_submit", "payment_initiate", "packet_share"}
-    assert len({x["endpoint"] for x in by.values()}) == 4 and by["packet_share"]["available"] is False and "Prompt 20" in by["packet_share"]["note"]
-    assert "funding_packet_share" not in adapters.BY_KIND
+    assert len({x["endpoint"] for x in by.values()}) == 4 and by["packet_share"]["available"] is True
+    assert "funding_packet_share" in adapters.BY_KIND
     # The packet adapter itself works against its mock endpoint.
     packet = adapters.ADAPTERS["packet_share"]
-    req = packet.build({"packet_id": "pkt-1", "recipient": "Sandbox lender", "fields": ["cash_summary", "obligations"], "expires_at": "2026-12-31T00:00:00+00:00"}, {})
+    packet_body = {"cash_summary": {"as_of": "2026-10-20"}}
+    req = packet.build({"packet_id": "pkt-1", "recipient": "Sandbox lender", "disclosed_fields": ["cash_summary"], "packet": packet_body,
+                        "packet_sha256": "a" * 64, "expires_at": "2026-12-31T00:00:00+00:00"}, {})
+    assert req["packet"] == packet_body and "obligations" not in str(req)
     out = packet.send(req, "c" * 64)
-    assert out.event == "succeeded" and out.reference.startswith("SBX-PKT-") and out.result["fields_received"] == 2
+    assert out.event == "succeeded" and out.reference.startswith("SBX-PKT-") and out.result["fields_received"] == 1
     assert sandbox[-1] == ("/sandbox/packets", "c" * 64)
 
 

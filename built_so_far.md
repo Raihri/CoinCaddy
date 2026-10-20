@@ -26,7 +26,9 @@
 | 16 | Transaction Fraud Monitor | **Done — verified locally** |
 | 17 | Sandbox Action Executor | **Done — verified locally** |
 | 18 | Receivables Guardian | **Done — verified locally** |
-| 19–22 | Conditional Funding Plan through Region Pack | Not started |
+| 19 | Conditional Funding Plan | **Done — verified locally** |
+| 20 | Funding Passport | **Done — verified locally** |
+| 21–22 | Finance Chat through Region Pack | Not started |
 
 ## Prompt 00 — runnable foundation
 
@@ -666,7 +668,7 @@
 | Not used | No approval probability, score, or likelihood is calculated. The match rank is not an input or an output. The engine accepts only six named inputs (the date, jurisdiction, saved run, product, records, documents) and refuses any other, so no personal trait can be passed in | same |
 | Document register | Alembic revision `0014_financing_readiness`: `business_document` (kind, where it is kept, issue and expiry dates). It never stores the document or its number: a reference with **8 or more digits in a row** (after spaces and hyphens are removed) is refused by the API **and** by a database CHECK. Insert-only; a wrong entry is voided with a reason, never edited or deleted. Only the **owner** records or voids (`documents.write`); owner and bookkeeper can read (`documents.read`); staff → 403 | [backend/migrations/versions/0014_financing_readiness.py](backend/migrations/versions/0014_financing_readiness.py), [backend/app/modules/readiness/router.py](backend/app/modules/readiness/router.py) |
 | Saved checks | `readiness_check` stores the frozen inputs with their SHA-256 and the results; append-only. A **database CHECK** ties the state to the counts, so a row cannot be `ready` while any condition is missing or uncertain. `POST …/financing-readiness` (new `readiness.run`: owner, bookkeeper; audited), `GET …?run_id=`, `GET …/{id}`, `GET …/{id}/verify`. GET and POST only; there is no apply, submit, share, or send route, and a check changes no Funding Match | same |
-| UI | On **Funding Matches**, a **Readiness** card sits beside Compare options as in `images/06-funding-matches.png`: a product picker, the state badge with counts, one row per condition with a mark (+ present, ? uncertain, ! missing) **and** the status word (colour is never the only signal), expandable requirement, source, and verification, then "Improve before applying". A **Documents for financing** card below records and voids register entries, and the Readiness card says when the register changed after the shown check. BDT amounts in the text use the app format (taka sign, 1,00,000 grouping). The Funding Passport card of the mockup is not built (Prompt 20) | [frontend/src/funding/ReadinessCard.tsx](frontend/src/funding/ReadinessCard.tsx), [frontend/src/funding/DocumentsCard.tsx](frontend/src/funding/DocumentsCard.tsx), [frontend/src/funding/FundingMatchesPage.tsx](frontend/src/funding/FundingMatchesPage.tsx) |
+| UI | On **Funding Matches**, a **Readiness** card sits beside Compare options as in `images/06-funding-matches.png`: a product picker, the state badge with counts, one row per condition with a mark (+ present, ? uncertain, ! missing) **and** the status word (colour is never the only signal), expandable requirement, source, and verification, then "Improve before applying". A **Documents for financing** card below records and voids register entries, and the Readiness card says when the register changed after the shown check. BDT amounts in the text use the app format (taka sign, 1,00,000 grouping). The Funding Passport card is added by Prompt 20 | [frontend/src/funding/ReadinessCard.tsx](frontend/src/funding/ReadinessCard.tsx), [frontend/src/funding/DocumentsCard.tsx](frontend/src/funding/DocumentsCard.tsx), [frontend/src/funding/FundingMatchesPage.tsx](frontend/src/funding/FundingMatchesPage.tsx) |
 
 ### Evidence (run on 20 Oct 2026)
 
@@ -712,7 +714,7 @@
 | Recheck before "executable" | `POST …/approvals/{id}/release` (owner only) re-checks, at that moment: the releasing user is still an owner; an approval exists; the approver is **still** an owner; the second reviewer rule; not expired; **payload integrity** (the hash recomputed from the stored row = the stored hash = the hash that was approved = the hash the owner is looking at); T3 re-authentication and verification; and that the **records still match** (for example the outstanding amount, a new dispute, or other payments for the same bill already released that would together exceed it). Any failure → 409 with the list of checks, an audit event, and no state change. Releasing executes nothing; `executed` is always false | same router |
 | Re-authentication | The owner's password is checked with the stored scrypt hash on each T3 approval. A wrong or missing password → 403 and a `approvals.reauth` failed audit event (no password in the details). 5 failures in 15 minutes → 429 | same router |
 | Roles and API | New actions: `approvals.read` and `approvals.propose` (owner, bookkeeper), `approvals.decide` and `approvals.release` (owner only). Staff have none. Routes: `GET /approvals/policy`, `GET /approvals?state=`, `GET /approvals/{id}`, `POST /approvals`, `POST …/{id}/decision`, `POST …/{id}/withdraw`, `POST …/{id}/release`. GET and POST only; no execute, send, pay, submit, or share route. Another business's proposal → 404 | [backend/app/modules/identity/policy.py](backend/app/modules/identity/policy.py), [backend/app/main.py](backend/app/main.py) |
-| UI | **Approvals & Audit** follows `images/08-approvals-and-audit.png`: the **Approval inbox** on the left (tier chip, title, one line of detail, the status line in words such as "Owner approval required" or "Owner re-auth and second reviewer required", a Review button, and an "N pending" badge), and the **Funding Passport preview** (marked unavailable, Prompt 20) and **Activity history** on the right. Styling follows design.md (the mockup's teal is replaced by the design.md primary blue). Below that layout: a **New proposal** form and a **Review** panel with the exact action, the full hash, the stored JSON, the gates for its tier, the decision history, and the actions the user may take. Approving needs the "I reviewed this exact proposal" box; T3 also needs the verification method, note, date, and password. The release check shows every check as Passed or Failed. Form errors are shown next to each field before anything is sent; the server checks everything again | [frontend/src/audit/AuditPage.tsx](frontend/src/audit/AuditPage.tsx), [frontend/src/approvals/](frontend/src/approvals/), [frontend/src/styles.css](frontend/src/styles.css) |
+| UI | **Approvals & Audit** follows `images/08-approvals-and-audit.png`: the **Approval inbox** on the left (tier chip, title, one line of detail, the status line in words such as "Owner approval required" or "Owner re-auth and second reviewer required", a Review button, and an "N pending" badge), and the **Funding Passport preview** (Prompt 20 preview is built on Funding Matches) and **Activity history** on the right. Styling follows design.md (the mockup's teal is replaced by the design.md primary blue). Below that layout: a **New proposal** form and a **Review** panel with the exact action, the full hash, the stored JSON, the gates for its tier, the decision history, and the actions the user may take. Approving needs the "I reviewed this exact proposal" box; T3 also needs the verification method, note, date, and password. The release check shows every check as Passed or Failed. Form errors are shown next to each field before anything is sent; the server checks everything again | [frontend/src/audit/AuditPage.tsx](frontend/src/audit/AuditPage.tsx), [frontend/src/approvals/](frontend/src/approvals/), [frontend/src/styles.css](frontend/src/styles.css) |
 
 ### Evidence (run on 20 Oct 2026)
 
@@ -932,10 +934,60 @@
 | Rescue Plan | Built (Prompt 13): proposals only, no ledger mutation |
 | Financing catalogue and matching | Built (Prompt 12): illustrative catalogue, filters, forecast effect, ranking |
 | Financing readiness | Built (Prompt 14): per-condition checklist with sources, document register, no probability or score |
-| Conditional plan and Funding Passport | Not implemented (Prompts 19, 20) |
+| Conditional Funding Plan | Built (Prompt 19): evidence-checked receipt trigger, no-borrow and illustrative backup forecasts, owner review; no automatic application |
+| Funding Passport | Built (Prompt 20): owner-selected, versioned preview; exact packet hash; T3 approval and sandbox sharing |
 | Fraud rules and payment hold | Built (Prompt 16): versioned rules, suspected-activity flags, holds on proposed sandbox payments, reviews, payee destination register |
 | Sandbox action executor and operation logs | Built (Prompt 17): four separate mock adapters, rechecks before each run, idempotent retries, redacted append-only logs. No real integrations |
 | Receivables Guardian | Built (Prompt 18): aging, prioritized contacts, verified contact gate, internal drafts, approval and sandbox outcome history |
+
+## Prompt 19 — Conditional Funding Plan
+
+### What was built
+
+| Area | What exists | Files |
+| --- | --- | --- |
+| Plan setup | An owner selects an outstanding, undisputed customer invoice, expected amount, future trigger date, and an eligible product from a saved Funding Match run. Invoice and backup must share a currency. The match is frozen to its saved catalogue and remains illustrative | [backend/app/modules/conditional_funding/router.py](backend/app/modules/conditional_funding/router.py), [backend/app/modules/conditional_funding/engine.py](backend/app/modules/conditional_funding/engine.py) |
+| Receipt verification | **Check receipt and trigger** counts only non-reversed invoice allocations linked to a posted ledger transaction created after the plan. An unallocated posted transaction does not verify payment. Before the trigger date the plan stays awaiting; a sufficient linked receipt moves it to the verified branch | same router |
+| Missed trigger | After the trigger date, no verified receipt creates an internal missed-trigger event and recalculates the no-borrow path beside the backup-financing path. It creates no application, payment, or data share. Partial linked receipts reduce only the remaining expected amount in the missed scenario | same engine |
+| Cash paths | At creation, a no-borrow scenario places the planned receipt on its trigger date; the backup path omits that amount, adds illustrative net proceeds after the trigger plus the product's repayment schedule, and recalculates with the existing Cash Outlook engine. After a miss, both paths are recalculated from current frozen records. Every scenario stores its input hash and result | same engine, [backend/migrations/versions/0019_conditional_funding_plan.py](backend/migrations/versions/0019_conditional_funding_plan.py) |
+| Owner review and access | After a miss, the owner can record proceed or decline. Proceed directs them to the existing Funding Matches and readiness flow; any application still requires the existing owner approval and sandbox executor, which already return stored results on idempotent retries. Plans, events, and snapshots are append-only. Owners and bookkeepers can read/evaluate; only owners create and review; staff are denied | [backend/app/modules/identity/policy.py](backend/app/modules/identity/policy.py), [frontend/src/conditional/ConditionalFundingPage.tsx](frontend/src/conditional/ConditionalFundingPage.tsx), [frontend/src/shell/navigation.ts](frontend/src/shell/navigation.ts) |
+
+### Verification
+
+- Schema migrated to `0019_conditional_funding_plan`; readiness check expects that revision.
+- Prompt 19 integration checks cover the receipt branch, an unallocated posted transaction that must not verify settlement, the missed-trigger branch, no-borrow versus backup snapshots, owner/staff permissions, and repeated evaluate/review calls without duplicate transitions.
+- `npm run build` passes. Backend Prompt 19 tests pass: **3 passed**.
+
+### Known limits
+
+- Trigger checks run when an owner or bookkeeper presses the page button; there is no scheduled background worker in this prototype.
+- A verified receipt requires a posted transaction linked to an invoice allocation. The app does not automatically infer or match a receipt to an invoice.
+- A proceeds date and repayment schedule are illustrative estimates from the saved sample catalogue. The system does not apply, share, or promise financing. The owner must use the existing readiness, approval, and sandbox steps if they choose to continue.
+
+## Prompt 20 — Funding Passport
+
+### What was built
+
+| Area | What exists | Files |
+| --- | --- | --- |
+| Owner-selected packet | On Funding Matches, the owner selects business profile, cash outlook, obligations summary, and optional evidence register entries; chooses one of two simulated recipients and an expiry from 1–30 days; then reviews the exact packet preview. The API builds it from business-scoped source records and stores an immutable `passport-v1` snapshot and SHA-256 disclosure fingerprint | [backend/app/modules/passport/router.py](backend/app/modules/passport/router.py), [backend/migrations/versions/0020_funding_passport.py](backend/migrations/versions/0020_funding_passport.py), [frontend/src/funding/FundingPassportCard.tsx](frontend/src/funding/FundingPassportCard.tsx) |
+| Selected data and minimization | Profile shares business name, jurisdiction, and currency. Cash is copied from the latest saved Cash Outlook and cannot be included unless its snapshot is current and hash-valid. Obligations are aggregated by currency, with disputed balances separate; names and invoice numbers are omitted. Selected evidence shares type and issue/expiry dates only; internal document IDs and register locations stay private, with IDs retained separately for lineage. Including cash requires a current outlook | same; evidence lineage in [backend/migrations/versions/0021_passport_evidence_lineage.py](backend/migrations/versions/0021_passport_evidence_lineage.py) |
+| Approval and sandbox sharing | Requesting share creates a T3 `funding_packet_share` proposal from the immutable packet. It requires owner approval, password re-authentication, documented verification, and a second reviewer. Approval release and sandbox execution re-check packet expiry and hash. The sandbox adapter sends the exact packet only to the local mock service | [backend/app/modules/approvals/policy.py](backend/app/modules/approvals/policy.py), [backend/app/modules/approvals/router.py](backend/app/modules/approvals/router.py), [backend/app/modules/executor/adapters.py](backend/app/modules/executor/adapters.py), [mock_services/sandbox.py](mock_services/sandbox.py) |
+| Access and audit | Only an owner can create a packet; owner and bookkeeper can read packet options. Staff cannot approve disclosure. Packet creation records recipient, version, selected sections, evidence count, expiry, and fingerprint | [backend/app/modules/identity/policy.py](backend/app/modules/identity/policy.py), [frontend/src/audit/AuditPage.tsx](frontend/src/audit/AuditPage.tsx) |
+
+### Verification
+
+- Schema migrated through `0021_passport_evidence_lineage`.
+- `pytest -q tests/test_funding_passport.py tests/test_sandbox_executor.py` → **20 passed**. Coverage includes omitted unselected fields, expired packet refusal, staff approval denial, evidence minimization and voided-entry rejection, T3 owner approval/release, and one sandbox packet share.
+- Full backend suite: `pytest -q` → **427 passed**. Health readiness now expects schema revision `0021_passport_evidence_lineage`.
+- `npm run build` passes; Python `compileall` passes.
+
+### Known limits
+
+- Recipients are fixed simulated lenders. Nothing is sent to a real lender, and the mock makes no lending decision.
+- Evidence means a register entry, not the underlying file; the recipient cannot inspect or verify the original document.
+- Cash data comes from a saved Cash Outlook and is included only while its inputs still match. A saved packet remains an immutable snapshot if records later change; create a new packet to refresh it.
+- The business profile is owner-maintained, not independently verified. Product terms and recipient requirements remain illustrative.
 | AI assistant and tool boundaries | Not implemented (Prompt 21) |
 | Deployment, presentation deck, demo video, security self-assessment | Not created |
 | Real customer interviews, pilots, financial outcomes | Not supplied or verified |
@@ -970,4 +1022,4 @@ Proposed external actions (an invoice reminder, a sandbox supplier payment, a fi
 
 A Transaction Fraud Monitor applies versioned rules (duplicate payment, unusual payee amount, split payments near a limit, lookalike payee, changed destination details, paid without settlement). It raises suspected-activity flags, never fraud verdicts, each with the compared record IDs and the rule's reason. For a material unresolved flag it shows two bounded cash outcomes on the Cash Outlook inputs. A flagged proposed sandbox payment is held: it cannot be approved or released (enforced in the API and in the database). A destination change is cleared only after independent verification by someone other than the person who recorded it. Reviewers confirm, clear, or defer with a reason, and the original records are never changed. Destination numbers are stored and audited only as their last four digits.
 
-An approved and released proposal can be run once in the sandbox through its own mock adapter (reminder send, application submission, payment initiation; packet sharing is ready for a later proposal type). Approval, business scope, payload hash, expiry, the source records, and any fraud hold are checked again just before each run, in the API and by database triggers. Idempotency keys give a retry the stored outcome without a second call, and every attempt is logged with a timestamp and redacted request and result. An approved action, a denied unapproved action, a blocked fraud-held action, and an idempotent retry were tested. There is no real payment integration, messaging provider, or lender connectivity.
+An approved and released proposal can be run once in the sandbox through a mock adapter (reminder send, application submission, payment initiation, or selected Funding Passport sharing). Approval, business scope, payload hash, expiry, the source records, and any fraud hold are checked again just before each run, in the API and by database triggers. Idempotency keys give a retry the stored outcome without a second call, and every attempt is logged with a timestamp and redacted request and result. A Funding Passport is immutable, contains only owner-selected fields, masks unnecessary evidence details, and can be shared only after T3 approval to a local simulated recipient. There is no real payment integration, messaging provider, or lender connectivity.

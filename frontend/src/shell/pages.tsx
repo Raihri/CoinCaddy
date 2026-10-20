@@ -34,7 +34,7 @@ export function SystemStatusPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">System status</h1>
-          <p className="page-sub">Development foundation only. No finance feature is built yet.</p>
+          <p className="page-sub">Development sandbox status. Finance tools are available from the sidebar.</p>
         </div>
         <button type="button" className="btn btn-primary" onClick={load}>Re-check</button>
       </div>

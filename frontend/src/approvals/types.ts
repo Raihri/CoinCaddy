@@ -6,7 +6,7 @@ export type Decision = {
   checks: Check[] | null;
 };
 export type Proposal = {
-  id: string; kind: "invoice_reminder" | "supplier_payment" | "financing_application"; title: string; tier: "T2" | "T3";
+  id: string; kind: "invoice_reminder" | "supplier_payment" | "financing_application" | "funding_packet_share"; title: string; tier: "T2" | "T3";
   required_role: string; second_reviewer_required: boolean; policy_version: string; gates: string[];
   payload: Record<string, unknown>; payload_sha256: string; integrity: { payload_hash_matches: boolean };
   proposed_by: { id: string; name: string; role: string }; created_at: string; expires_at: string;
@@ -89,7 +89,7 @@ export function isoDateIn(timezone: string | undefined, d: Date = new Date()): s
 export function placeErrors(errors: Record<string, string>, fields: string[]): Record<string, string> {
   const out: Record<string, string> = {};
   for (const [path, msg] of Object.entries(errors)) {
-    const key = path.replace(/^(invoice_reminder|supplier_payment|financing_application)\./, "");
+    const key = path.replace(/^(invoice_reminder|supplier_payment|financing_application|funding_packet_share)\./, "");
     if (key !== "_form" && fields.some((f) => key === f || key.startsWith(f + "."))) out[key] ??= msg;
     else out._form ??= msg;
   }

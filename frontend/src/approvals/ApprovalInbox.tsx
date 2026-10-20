@@ -66,5 +66,7 @@ export function subtitle(p: Proposal, format: (minor: number, currency: string) 
       return `${d.supplier} · ${money(d.amount_minor, d.currency)} · ${d.document_number} from ${d.from_account}`;
     case "financing_application":
       return `Recipient: ${d.recipient} · ${d.product} · ${money(d.amount_minor, d.currency)}`;
+    case "funding_packet_share":
+      return `${d.packet_version} · ${d.recipient} · ${Array.isArray(d.disclosed_fields as unknown) ? (d.disclosed_fields as unknown[]).length : 0} selected sections`;
   }
 }

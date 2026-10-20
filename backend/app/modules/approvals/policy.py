@@ -18,6 +18,7 @@ KINDS: dict[str, dict] = {
     "invoice_reminder": {"tier": "T2", "title": "Send overdue invoice reminder"},
     "supplier_payment": {"tier": "T3", "title": "Pay supplier (sandbox)"},
     "financing_application": {"tier": "T3", "title": "Submit financing application (sandbox lender)"},
+    "funding_packet_share": {"tier": "T3", "title": "Share Funding Passport (sandbox)"},
 }
 
 TIERS: dict[str, dict] = {

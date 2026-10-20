@@ -49,6 +49,7 @@ const APPROVAL_KIND: Record<string, string> = {
   invoice_reminder: "invoice reminder",
   supplier_payment: "supplier payment",
   financing_application: "financing application",
+  funding_packet_share: "Funding Passport packet",
 };
 
 const FRAUD_RULE: Record<string, string> = {
@@ -191,6 +192,8 @@ function describe(e: AuditEvent): string {
       return `Released a ${d.tier} ${APPROVAL_KIND[d.kind as string] ?? "action"} as executable after ${d.checks_passed} checks (not executed)`;
     case "approvals.release:conflict":
       return `Release refused: ${d.failed_checks ? (d.failed_checks as string[]).join(", ").replace(/_/g, " ") : d.reason}`;
+    case "passport.packet_create:success":
+      return `Built Funding Passport ${d.version} preview for ${d.recipient} with ${(d.fields as string[]).join(", ")}`;
     case "approvals.read:denied":
     case "approvals.propose:denied":
     case "approvals.decide:denied":
@@ -323,8 +326,8 @@ export function AuditPage() {
         <div className="approvals-col">
           <section className="card" aria-labelledby="passport-title">
             <h2 id="passport-title" className="section-title">Funding Passport preview</h2>
-            <span className="badge badge-info">Unavailable</span>
-            <p className="muted">The Funding Passport is not built yet (Prompt 20). Nothing is shared with any lender from this page.</p>
+            <span className="badge badge-info">Preview on Funding Matches</span>
+            <p className="muted">Assemble and review the selected packet in Funding Matches. Sharing requires owner approval and runs only through the sandbox.</p>
           </section>
           <ActivityHistory base={base} canRead={can("audit.read")} businessName={active?.business_name} timezone={timezone} refreshKey={historyKey} />
         </div>

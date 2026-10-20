@@ -87,7 +87,12 @@ class ApplicationIn(_ProposalBase):
     readiness_check_id: UUID
 
 
-ProposalIn = Annotated[Union[ReminderIn, PaymentIn, ApplicationIn], Field(discriminator="kind")]
+class FundingPacketIn(_ProposalBase):
+    kind: Literal["funding_packet_share"]
+    packet_id: UUID
+
+
+ProposalIn = Annotated[Union[ReminderIn, PaymentIn, ApplicationIn, FundingPacketIn], Field(discriminator="kind")]
 
 
 class VerificationIn(_Strict):
@@ -256,11 +261,27 @@ def _application(db: Session, b: UUID, today: date, p: dict, self_id=None, relea
             "purpose": req["purpose"], "illustrative": True, "recipient": "sandbox lender", "delivery": "sandbox"}
 
 
-BUILDERS = {"invoice_reminder": _reminder, "supplier_payment": _payment, "financing_application": _application}
+def _funding_packet(db: Session, b: UUID, today: date, p: dict, self_id=None, release: bool = False) -> dict:
+    row = db.execute(text("SELECT id, packet_version, recipient, packet, packet_sha256, expires_at FROM funding_passport_packet WHERE business_id = :b AND id = :i"),
+                     {"b": b, "i": p["packet_id"]}).mappings().first()
+    if not row:
+        raise SourceError("That Funding Passport packet was not found for this business.")
+    if row["expires_at"] <= utc_now():
+        raise SourceError("That Funding Passport packet has expired; create a fresh preview.")
+    if sha256(row["packet"]) != row["packet_sha256"]:
+        raise SourceError("The Funding Passport packet failed its integrity check.")
+    return {"packet_id": str(row["id"]), "packet_version": row["packet_version"], "recipient": row["recipient"],
+            "packet": row["packet"], "packet_sha256": row["packet_sha256"], "expires_at": row["expires_at"].isoformat(),
+            "delivery": "sandbox", "disclosed_fields": sorted(row["packet"].keys())}
+
+
+BUILDERS = {"invoice_reminder": _reminder, "supplier_payment": _payment, "financing_application": _application,
+            "funding_packet_share": _funding_packet}
 # Facts the release recheck compares with today's records (what an approver relied on).
 FACTS = {"invoice_reminder": ("obligation_id", "customer", "outstanding_minor", "currency", "contact_id"),
          "supplier_payment": ("obligation_id", "supplier", "amount_minor", "currency", "from_account_id"),
-         "financing_application": ("readiness_check_id", "product_id", "amount_minor", "currency")}
+         "financing_application": ("readiness_check_id", "product_id", "amount_minor", "currency"),
+         "funding_packet_share": ("packet_id", "packet_version", "recipient", "packet", "packet_sha256", "expires_at", "disclosed_fields")}
 
 
 # --- reading ------------------------------------------------------------------------------------------------

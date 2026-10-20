@@ -110,12 +110,12 @@ class PaymentInitiate(Adapter):
 class PacketShare(Adapter):
     code, label, path, proposal_kind = "packet_share", "Mock packet sharing", "/sandbox/packets", "funding_packet_share"
     result_fields = Adapter.result_fields + ("fields_received",)
-    available = False
-    note = "Ready, but no approvable proposal uses it yet: packet sharing proposals arrive with the Funding Passport (Prompt 20)."
+    available = True
+    note = "Sandbox only. Sends exactly the owner-selected packet snapshot to a simulated recipient."
 
     def build(self, payload: dict, extra: dict) -> dict:
-        return {"packet_id": payload["packet_id"], "recipient": payload["recipient"], "fields": list(payload["fields"]),
-                "expires_at": payload["expires_at"]}
+        return {"packet_id": payload["packet_id"], "recipient": payload["recipient"], "fields": list(payload["disclosed_fields"]),
+                "packet": payload["packet"], "packet_sha256": payload["packet_sha256"], "expires_at": payload["expires_at"]}
 
 
 ADAPTERS: dict[str, Adapter] = {a.code: a for a in (ReminderSend(), ApplicationSubmit(), PaymentInitiate(), PacketShare())}

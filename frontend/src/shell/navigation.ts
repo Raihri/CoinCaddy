@@ -13,7 +13,7 @@ export const DESTINATIONS: Destination[] = [
   { path: "/records", label: "Records", monogram: "RC", available: true, plannedIn: "Prompts 05-06 (reconciliation, obligations)" },
   { path: "/financial-health", label: "Financial Health", monogram: "FH", available: true, plannedIn: "Prompt 07" },
   { path: "/cash-outlook", label: "Cash Outlook", monogram: "CO", available: true, plannedIn: "Prompt 08" },
-  { path: "/payment-review", label: "Payment Review", monogram: "PR", available: false, plannedIn: "Prompt 10" },
+  { path: "/payment-review", label: "Payment Review", monogram: "PR", available: true, plannedIn: "Prompt 10" },
   { path: "/funding-matches", label: "Funding Matches", monogram: "FM", available: false, plannedIn: "Prompt 12" },
   { path: "/fraud-monitor", label: "Fraud Monitor", monogram: "FR", available: false, plannedIn: "Prompt 16" },
   { path: "/approvals-audit", label: "Approvals & Audit", monogram: "AA", available: true, plannedIn: "Prompt 15 (approvals)" },

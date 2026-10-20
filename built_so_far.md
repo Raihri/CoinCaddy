@@ -17,7 +17,8 @@
 | 07 | Financial Health | **Done — verified locally** |
 | 08 | Cash Outlook | **Done — verified locally** |
 | 09 | Smart Alerts | **Done — verified locally** |
-| 10–22 | Payment Review through Region Pack | Not started |
+| 10 | Payment Review | **Done — verified locally** |
+| 11–22 | Evidence Queue through Region Pack | Not started |
 
 ## Prompt 00 — runnable foundation
 
@@ -481,6 +482,47 @@
 - The reserve-breach alert is only as good as the outlook: stale or missing balances and unentered recurring bills change it (see Prompt 08 gaps).
 - No real notification channel; the minimal text is stored only. Fraud-case review and action execution are not part of this prompt.
 
+## Prompt 10 — Payment Review
+
+### What was built
+
+| Area | What exists | Files |
+| --- | --- | --- |
+| Schema | Alembic revision `0011_payment_review`: `payment_review` stores the request, the **frozen Cash Outlook inputs** and their SHA-256, the calculation version, the four-path results, and the decision. Append-only (triggers reject UPDATE, DELETE, TRUNCATE). It has no link to any payment or action | [backend/migrations/versions/0011_payment_review.py](backend/migrations/versions/0011_payment_review.py) |
+| Request | Funding account, amount (integer minor units), payment date (after today, within 13 weeks), optional payee, optional **linked payable**, and a required **owner-defined adverse case**: receipts later by N days (0–90), receipts lower by N %, and/or one extra outflow with a date. An empty adverse case is refused. The payee is stripped of control characters and spreadsheet-formula starts | [backend/app/modules/payment_review/router.py](backend/app/modules/payment_review/router.py) |
+| Engine (`payment-review-v1`, pure) | One frozen input object, four paths, one currency at a time:<br>• **All on time** = the Cash Outlook expected path.<br>• **Receipts delayed** = the cautious path (receipts 14 days late, overdue receipts left out).<br>• **Largest receipt missed** = the expected path without the single largest eligible receipt.<br>• **Owner-defined adverse** = the expected path with the owner's delay, reduction (rounded down), and extra outflow.<br>Per path: minimum cash and date, first reserve breach (date, balance, gap), shortfall, assumptions, source links, and every dated event. **Within a day, outflows are applied before inflows**, so a day that closes above the reserve can still breach. The funding account is also checked for going overdrawn. A **linked payable's own event is removed** and replaced by the payment; any unpaid remainder stays on its original date | [backend/app/modules/payment_review/engine.py](backend/app/modules/payment_review/engine.py) |
+| Decision | Three separate states: **arithmetic** (within reserve / shortfall / not assessed), **evidence** (complete / incomplete), and **exactly one decision**. Any breach on any path → **Reserve shortfall**, even when evidence is also incomplete (both are shown). No breach but a material unknown → **More information needed**. Neither → **Within reserve under stated assumptions**. Material unknowns: funding account balance missing or stale, any other stale balance in that currency, an unmatched own-account transfer, a disputed linked payable, no reserve defined in that currency. If the funding balance is missing, no minimum or breach is stated at all ("not assessed") rather than invented | same |
+| API | `POST …/payment-reviews` (new role action `paymentreview.run`: owner, bookkeeper; computes and **saves**; audited as `paymentreview.create`), `GET …/payment-reviews`, `GET …/{id}`, `GET …/{id}/verify` (recomputes from the stored inputs and checks the hash) (`paymentreview.read`: owner, bookkeeper; staff → 403). There is no route that pays, approves, or executes; the response says the review "does not approve, authorize, or initiate any payment" | [backend/app/modules/identity/policy.py](backend/app/modules/identity/policy.py) |
+| UI | **Payment Review** is now available (layout from `images/05-payment-review.png`: proposed payment card with the decision pill, Four scenario check, Evidence that matters with "View supporting record" links; styling from `design.md`). Above it, the entry form (funding account, amount, date, payee, linked bill, adverse case). Below it, per-scenario assumptions, source links, and the dated movements, plus the calculation version and inputs hash and a list of saved reviews. The **Rescue options** section of the mockup is not built (a later prompt) | [frontend/src/review/PaymentReviewPage.tsx](frontend/src/review/PaymentReviewPage.tsx) |
+
+### Evidence (run on 20 Oct 2026)
+
+- `alembic upgrade head` → `0010_alerts -> 0011_payment_review`; `/api/health/ready` expects `0011_payment_review`.
+- `pytest -q` → **314 passed**: 299 earlier plus 15 new in [backend/tests/test_payment_review.py](backend/tests/test_payment_review.py). Hand-worked case (bank 16,000,000, reserve 8,000,000, as of 20 Oct; pay 6,000,000 on 23 Oct, linked to a 6,000,000 bill due the same day; rent 2,000,000 on 22 Oct; a 1,000,000 bill on 28 Oct; invoices 5,000,000 due 25 Oct and 3,000,000 overdue; one disputed invoice):
+  - **All on time:** lowest **8,000,000 on 23 Oct**, exactly the reserve, so **no breach** (the boundary is "below", not "at").
+  - **Receipts delayed:** lowest **7,000,000 on 28 Oct**; first breach 28 Oct, gap **1,000,000**; the overdue invoice is not counted.
+  - **Largest receipt missed:** the 5,000,000 invoice is removed (the 3,000,000 one remains); lowest 8,000,000 on 23 Oct, no breach.
+  - **Owner-defined adverse** (receipts 10 days later and 20% lower, extra 500,000 on 30 Oct): receipts become 4,000,000 on 4 Nov and 2,400,000 on 6 Nov; first breach 28 Oct, lowest **6,500,000 on 30 Oct**, shortfall **1,500,000**.
+  - **Decision:** Reserve shortfall; arithmetic shortfall, evidence complete.
+  - **No double counting:** with the bill linked, 23 Oct nets to exactly −6,000,000 and the bill appears once. The same payment unlinked leaves the bill in, and the 23 Oct balance falls to 2,000,000 (gap 6,000,000). A 4,000,000 payment against the 6,000,000 bill leaves the 2,000,000 remainder on 23 Oct.
+  - **Intraday convention:** balance 9,000,000, 5,000,000 received and 3,000,000 paid the same day closes at 11,000,000, but the review reports a breach at **6,000,000** (outflow first).
+  - **Material unknowns:** with no breach, a stale funding balance, a missing funding balance, or an unmatched transfer each gives **More information needed** with the blocker and its record ID; a missing balance reports every path as "not assessed" with no figures; a breach plus a stale balance still returns **Reserve shortfall** with the evidence marked incomplete; a disputed linked payable is a blocker.
+  - **Refusals:** a payment larger than the linked bill, today or a date beyond 13 weeks, another business's account or bill, a non-bill link, an empty adverse case, an extra outflow with no date, floats, a formula-like payee, and unknown fields.
+  - **Saved report (API):** 9,000,000 balance, a 2,000,000 bill due day 3 linked to a 2,000,000 payment on day 4 → every path's lowest is **7,000,000 on day 4**, gap 1,000,000 (a double count would give 5,000,000). The saved report equals the response, **Verify** reproduces it, and it stays unchanged after the bill is paid.
+  - **Access and audit:** staff → 403 (run and read); a bookkeeper can run; another business → 404 for list, read, and verify; the success and the staff refusal are audited; the payee name is not copied into the audit trail; the router exposes only GET and POST and no pay/execute route; UPDATE on a saved report is rejected as append-only.
+- **Browser run (real UI, demo business, Amina):** a BDT 20,000 payment to "Delta Supplies" on 23 Oct from the operating bank account → **Reserve shortfall**. Lowest cash **৳ 23,001.00 on 23 Oct**, first below reserve 21 Oct, shortfall **৳ 56,999.00**. This equals the hand calculation (bank BDT 43,001.00 − 20,000.00; reserve BDT 80,000.00). The evidence panel listed the unmatched transfer ("View supporting record"), the cash box and wallet with no balance, and the notice that a shortfall is shown although evidence is incomplete.
+- `audit.verify` → `Audit chain OK`. `npm run build` passes.
+
+### Known gaps and risks
+
+- Daily timing inside a day is a convention (outflows first), not real bank timing. It is stricter than the Cash Outlook chart, so a review can show a breach the chart does not.
+- The decision uses the same fixed outlook assumptions (14-day delay, 7-day assumed collection of overdue invoices) and the same limits (no recurring costs unless entered, no future own-account transfers). A positive result is only "under stated assumptions".
+- "Largest eligible receipt" means the biggest non-disputed receipt the expected path counts, including an overdue one assumed collected.
+- Any unmatched own-account transfer blocks a positive result, because it cannot be tied to one account. Stale non-funding balances also block. This may be stricter than a human would be.
+- Only one currency is reviewed at a time (the funding account's); other currencies are ignored, not converted.
+- No preview without saving: every run creates a saved report. Saved reports cannot be deleted.
+- The Rescue options from the mockup and the evidence-impact queue (Prompts 11 and 13) are not built. Nothing here approves or executes a payment (Prompts 15 and 17).
+
 ## Not built or verified yet
 
 | Area | Current status |
@@ -489,7 +531,8 @@
 | Records foundation | Built: CSV/XLSX import (Prompt 04); balance reconstruction, reconciliation, restricted funds, and transfers (Prompt 05); receivables and payables with payments, reversals, and disputes (Prompt 06) |
 | Financial analysis and cash forecast | Built: Financial Health (Prompt 07) and Cash Outlook (Prompt 08) |
 | Alerts | Built: Smart Alerts (Prompt 09), manual run only |
-| Payment Review, evidence queue, and Rescue Plan | Not implemented (Prompts 10, 11, 13) |
+| Payment Review | Built (Prompt 10): four scenarios, saved reports, never initiates payment |
+| Evidence queue and Rescue Plan | Not implemented (Prompts 11, 13) |
 | Financing catalogue, matching, readiness, conditional plan, and Funding Passport | Not implemented (Prompts 12, 14, 19, 20) |
 | Fraud rules and payment hold | Not implemented (Prompt 16) |
 | Sandbox action executor and operation logs | Not implemented (Prompt 17) |
@@ -515,4 +558,6 @@ A cash-basis operating summary (not an audited P&L) ties every figure to its sou
 
 Deterministic alerts (reserve breach, overdue invoice, unusual outflow, repayment pressure) are shown on the Overview with their date, amount, cause, severity, and supporting record IDs, and repeated runs do not duplicate them. They run only on request; nothing is sent externally.
 
-No payment review, approval workflow, or lender connectivity exists yet.
+A proposed payment can be checked in four scenarios on one frozen snapshot, with exactly one decision state (within reserve under stated assumptions, reserve shortfall, or more information needed); known breaches stay visible and material unknowns block a positive result. Reports are saved and never initiate a payment.
+
+No approval workflow or lender connectivity exists yet.

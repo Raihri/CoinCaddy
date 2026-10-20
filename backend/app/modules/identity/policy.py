@@ -42,6 +42,9 @@ ROLE_MATRIX: dict[str, frozenset[str]] = {
     "alerts.read": frozenset({"owner", "bookkeeper", "staff"}),
     # Evaluate the alert rules now (reading alerts only needs alerts.read).
     "alerts.run": frozenset({"owner", "bookkeeper"}),
+    # Run a Payment Review (saves a report; never pays) / read saved reports. Staff do not see payment decisions.
+    "paymentreview.run": frozenset({"owner", "bookkeeper"}),
+    "paymentreview.read": frozenset({"owner", "bookkeeper"}),
     # Read the business's audit history.
     "audit.read": frozenset({"owner", "bookkeeper"}),
 }

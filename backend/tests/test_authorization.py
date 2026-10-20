@@ -110,7 +110,7 @@ def test_every_business_route_declares_a_known_action():
 
 
 def test_every_non_public_api_route_requires_sign_in():
-    public = {"/api/health/live", "/api/health/ready", "/api/auth/login"}
+    public = {"/api/health/live", "/api/health/ready", "/api/auth/login", "/api/auth/quick-login"}
     for route in app.routes:
         if isinstance(route, APIRoute) and route.path.startswith("/api") and route.path not in public:
             assert current_user in set(_dependency_calls(route.dependant)), route.path

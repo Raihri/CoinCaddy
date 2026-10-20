@@ -1,7 +1,4 @@
-# SME Finance Copilot — Proposed Architecture
-
-**Status:** Design specification, not implemented or security-certified  
-**Reference stack:** React/TypeScript web client; Python/FastAPI modular monolith; PostgreSQL; private object storage; one background worker; mock bank and lender APIs for the competition
+# CoinCaddy Proposed Architecture
 
 ## 1. System flow
 

@@ -603,3 +603,38 @@ a.chip { color: var(--primary); }
   .exec-body { flex-basis: 100%; order: 2; }
   .exec-item .btn { margin-left: auto; }
 }
+
+/* Finance Chat (Prompt 21): question form, answers with calculated facts, caveats, and sources. */
+.chat-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; align-items: start; }
+.chat-form { display: grid; gap: 8px; }
+.chat-form textarea { font: inherit; width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; resize: vertical; min-height: 64px; color: var(--text-primary); background: var(--surface); }
+.chat-form-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.chat-suggestions { margin-top: 12px; }
+.chat-chip { font: inherit; font-size: 12px; cursor: pointer; text-align: left; }
+.chat-chip:hover { border-color: var(--primary); color: var(--primary); }
+.chat-error { margin: 12px 0 0; }
+.chat-list { display: grid; gap: 16px; }
+.chat-answer { display: grid; gap: 12px; }
+.chat-answer-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.chat-q { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -0.04em; overflow-wrap: anywhere; }
+.chat-text { margin: 0; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.chat-text strong { color: var(--text-primary); }
+.chat-caveats { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.chat-caveats li { display: flex; gap: 8px; align-items: baseline; }
+.chat-caveats .badge { flex: none; }
+.chat-more { display: flex; flex-wrap: wrap; gap: 8px 24px; padding-top: 12px; border-top: 1px solid var(--border); }
+.chat-more details[open] { flex-basis: 100%; }
+.chat-facts { margin: 12px 0 0; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 24px; }
+.chat-facts dd { font-size: 14px; }
+.chat-from-records { margin-left: 6px; vertical-align: middle; }
+.chat-notes { margin: 0; }
+.chat-sources summary { cursor: pointer; font-size: 12px; font-weight: 500; color: var(--text-secondary); }
+.chat-sources ul { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 4px; }
+.chat-sources li { overflow-wrap: anywhere; }
+.chat-side { display: grid; gap: 12px; }
+.chat-side .card-title { margin: 0; }
+.chat-tools { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.chat-tool-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.chat-side-note { margin: 0; }
+@media (max-width: 1100px) { .chat-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; } }
+@media (max-width: 600px) { .chat-answer-head { flex-direction: column; gap: 2px; } .chat-facts { grid-template-columns: minmax(0, 1fr); } }

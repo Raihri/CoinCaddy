@@ -19,6 +19,7 @@ export const DESTINATIONS: Destination[] = [
   { path: "/payment-review", label: "Payment Review", icon: "review", available: true, plannedIn: "Prompt 10" },
   { path: "/funding-matches", label: "Funding Matches", icon: "funding", available: true, plannedIn: "Prompt 12" },
   { path: "/conditional-funding", label: "Conditional Funding", icon: "conditional", available: true, plannedIn: "Prompt 19" },
+  { path: "/finance-chat", label: "Finance Chat", icon: "chat", available: true, plannedIn: "Prompt 21" },
   { path: "/fraud-monitor", label: "Fraud Monitor", icon: "fraud", available: true, plannedIn: "Prompt 16" },
   { path: "/approvals-audit", label: "Approvals & Audit", icon: "approvals", available: true, plannedIn: "Prompt 15" },
 ];

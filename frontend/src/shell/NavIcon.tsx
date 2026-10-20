@@ -1,7 +1,7 @@
 // Sidebar icons (design.md §5: icon + label). Simple 24-unit line drawings in the current text colour: solid
 // strokes only, no fills or gradients, so the active state can recolour them to the primary blue.
 export type IconName =
-  | "status" | "overview" | "records" | "health" | "guardian" | "outlook" | "review" | "funding" | "conditional" | "fraud" | "approvals" | "settings" | "users";
+  | "status" | "overview" | "records" | "health" | "guardian" | "outlook" | "review" | "funding" | "conditional" | "fraud" | "approvals" | "chat" | "settings" | "users";
 
 const PATHS: Record<IconName, string[]> = {
   status: ["M3 12h4l3-8 4 16 3-8h4"],
@@ -14,6 +14,7 @@ const PATHS: Record<IconName, string[]> = {
   funding: ["M3 10l9-6 9 6", "M5 10v8", "M10 10v8", "M14 10v8", "M19 10v8", "M3 20h18"],
   conditional: ["M4 6h6l2 3h8", "M20 9l-3-3", "M20 9l-3 3", "M4 18h6l2-3h8", "M20 15l-3-3", "M20 15l-3 3"],
   fraud: ["M12 3l8 3v6c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V6z", "M12 8v5", "M12 16h.01"],
+  chat: ["M4 5h16v11H9l-5 4z", "M8 9.5h8", "M8 12.5h5"],
   approvals: ["M9 4h6v3H9z", "M9 5H6v16h12V5h-3", "M9 14l2 2 4-4"],
   settings: ["M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z",
              "M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6a7 7 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z"],

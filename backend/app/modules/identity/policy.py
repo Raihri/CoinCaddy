@@ -87,6 +87,10 @@ ROLE_MATRIX: dict[str, frozenset[str]] = {
     "conditional.write": frozenset({"owner"}),
     "conditional.evaluate": frozenset({"owner", "bookkeeper"}),
     "conditional.review": frozenset({"owner"}),
+    # Finance Chat: ask a read-only question / see your own past questions. Each answer's tool also needs the feature's own
+    # read action (records.read, paymentreview.read, funding.read), checked per tool; the chat has no write tools.
+    "chat.ask": frozenset({"owner", "bookkeeper", "staff"}),
+    "chat.read": frozenset({"owner", "bookkeeper", "staff"}),
     # Read the business's audit history.
     "audit.read": frozenset({"owner", "bookkeeper"}),
 }

@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     destination_hash_key: str = "change-me-local-destination-key"
     # Private directory for original uploaded files; empty means <repo>/storage/private.
     storage_dir: str = ""
+    # Finance Chat summary text: "template" (default, no model) or "claude" (optional; needs `pip install anthropic` and
+    # ANTHROPIC_API_KEY). The model only drafts wording; every number comes from the app's calculations.
+    finance_chat_assistant: str = "template"
+    finance_chat_model: str = "claude-opus-5-5"
 
     @property
     def cors_origins(self) -> list[str]:

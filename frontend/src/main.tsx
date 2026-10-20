@@ -10,6 +10,7 @@ import { FundingMatchesPage } from "./funding/FundingMatchesPage";
 import { FraudMonitorPage } from "./fraud/FraudMonitorPage";
 import { ReceivablesGuardianPage } from "./guardian/ReceivablesGuardianPage";
 import { ConditionalFundingPage } from "./conditional/ConditionalFundingPage";
+import { FinanceChatPage } from "./chat/FinanceChatPage";
 import { ImportDetailPage } from "./records/ImportDetailPage";
 import { RecordsPage } from "./records/RecordsPage";
 import { AccountPage } from "./cash/AccountPage";
@@ -44,6 +45,7 @@ function App() {
         <Route path="/fraud-monitor" element={<FraudMonitorPage />} />
         <Route path="/receivables-guardian" element={<ReceivablesGuardianPage />} />
         <Route path="/conditional-funding" element={<ConditionalFundingPage />} />
+        <Route path="/finance-chat" element={<FinanceChatPage />} />
         <Route path="/records" element={<RecordsPage />} />
         <Route path="/financial-health" element={<FinancialHealthPage />} />
         <Route path="/cash-outlook" element={<CashOutlookPage />} />

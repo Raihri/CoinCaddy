@@ -1,0 +1,6 @@
+Date,Description,Reference,Debit,Credit
+2026-10-16,Sample sale to Maple Store,QATEST-202610-001,,18500.00
+2026-10-17,Sample packaging supplies,QATEST-202610-002,3250.00,
+2026-10-18,Sample electricity bill,QATEST-202610-003,4700.00,
+2026-10-19,Sample sale to Pine Market,QATEST-202610-004,,12500.00
+2026-10-19,Sample delivery fee,QATEST-202610-005,975.50,

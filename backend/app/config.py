@@ -27,6 +27,16 @@ class Settings(BaseSettings):
     finance_chat_model: str = "claude-opus-5-5"
 
     @property
+    def sqlalchemy_database_url(self) -> str:
+        """Render exposes PostgreSQL URLs without a driver suffix; use the installed psycopg v3 driver."""
+        url = self.database_url
+        if url.startswith("postgres://"):
+            return "postgresql+psycopg://" + url.removeprefix("postgres://")
+        if url.startswith("postgresql://"):
+            return "postgresql+psycopg://" + url.removeprefix("postgresql://")
+        return url
+
+    @property
     def cors_origins(self) -> list[str]:
         return [o.strip() for o in self.api_cors_origins.split(",") if o.strip()]
 

@@ -1,4 +1,4 @@
-# Local development PostgreSQL only. The API, mock services, and web client run on the host.
+# Local development PostgreSQL only.
 services:
   postgres:
     image: postgres:16-alpine

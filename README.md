@@ -1,6 +1,6 @@
 # SME Finance Copilot — project package
 
-This folder contains a product requirements document, a proposed architecture, a build sequence, an honest status report, a feature/security matrix, and static screen mockups.
+This repository contains the LedgerLift SME finance copilot implementation, product and architecture documentation, build history, security self-assessment, test fixtures, and UI mockups.
 
 ## Documents
 
@@ -11,6 +11,8 @@ This folder contains a product requirements document, a proposed architecture, a
 | [phases.md](phases.md) | Competition demo path and later build phases with exit gates |
 | [built_so_far.md](built_so_far.md) | What exists in this package and what remains unimplemented |
 | [feature_security_matrix.md](feature_security_matrix.md) | Every feature, innovation flag, implementation approach, and built-in security |
+| [technical_documentation.md](technical_documentation.md) | Implemented system architecture, core calculations, security design, and verification evidence |
+| [security_self_assessment.md](security_self_assessment.md) | Implemented permission tiers, control assessment, test evidence, and known risks |
 
 ## Mockups
 
@@ -25,11 +27,11 @@ This folder contains a product requirements document, a proposed architecture, a
 7. [Fraud Monitor](images/07-fraud-monitor.png)
 8. [Approvals & Audit](images/08-approvals-and-audit.png)
 
-The screen images use illustrative synthetic BDT data. This package is a design and implementation plan, not evidence that the application, financial calculations, security controls, or integrations have been built.
+The screen images use illustrative synthetic BDT data. The runnable application is in `frontend/` and `backend/`; current implementation details and security limitations are documented in [technical_documentation.md](technical_documentation.md) and [security_self_assessment.md](security_self_assessment.md).
 
-## Run the development foundation locally
+## Run the app locally
 
-Requires Docker (for PostgreSQL 16), Python 3.12, and Node 20+. All data is synthetic; no live bank or lender credentials are used.
+Requires Docker (for PostgreSQL 16), Python, and Node.js. Use synthetic demo data; the app does not connect to a live bank or lender.
 
 ```bash
 # 1. Configuration (placeholders only - never commit .env)
@@ -58,7 +60,7 @@ python -m venv .venv
 .venv/Scripts/python -m app.modules.audit.verify
 ```
 
-Sign in at http://localhost:5173 with a synthetic demo user from [fixtures/demo_users.json](fixtures/demo_users.json) (`amina@northstar.example` owner, `bilal@northstar.example` bookkeeper, `chaya@northstar.example` staff, `tanvir@riverbend.example` owner of a second business). The password is `DEMO_USER_PASSWORD` from `.env`. Re-running the seed restores the demo roles.
+Sign in at http://localhost:5173 with a synthetic demo user from [fixtures/demo_users.json](fixtures/demo_users.json) (`amina@northstar.example` owner, `bilal@northstar.example` bookkeeper, `chaya@northstar.example` staff, `tanvir@riverbend.example` owner of a second business). The password is `DEMO_USER_PASSWORD` from `.env`. Passwordless quick login is disabled by default and, when enabled, only accepts synthetic demo users. Re-running the seed restores demo roles.
 
 To try Records import, upload the synthetic statements in [fixtures/imports/](fixtures/imports/) to "Operating bank account" on the Records page. `part1` has rejected rows, an in-file duplicate, and ambiguous dates, so choose DD/MM/YYYY. `part2` overlaps already-posted rows. Original uploads are kept privately under `storage/private/` (git-ignored, never served).
 
@@ -66,8 +68,8 @@ Health endpoints: `GET /api/health/live` (process) and `GET /api/health/ready` (
 
 | Path | Contents |
 | --- | --- |
-| [backend/](backend/) | FastAPI modular monolith, Alembic migrations, data contracts, tests |
-| [mock_services/](mock_services/) | Local stand-in for external bank/lender APIs (health only so far) |
-| [frontend/](frontend/) | React/TypeScript application shell |
+| [backend/](backend/) | FastAPI modular monolith, Alembic migrations, calculation services, and tests |
+| [mock_services/](mock_services/) | Local mock boundary for sandbox reminder, payment, application, and packet actions |
+| [frontend/](frontend/) | React/TypeScript application |
 | [fixtures/](fixtures/) | Synthetic business fixtures, hand-checked expected values, and demo import files |
 | `storage/` | Private uploaded originals (created at runtime, git-ignored) |
